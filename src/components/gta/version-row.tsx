@@ -90,9 +90,9 @@ export function VersionRow({
 			<div class="contents sm:flex sm:min-w-0 sm:flex-1 sm:flex-col sm:gap-6">
 				<div class="flex min-w-0 flex-col gap-3">
 					<div class="flex flex-col gap-1">
-						<h3 class="font-semibold text-foreground text-xl leading-tight tracking-tight sm:text-3xl">
+						<h2 class="font-semibold text-foreground text-xl leading-tight tracking-tight sm:text-3xl">
 							{version.title}
-						</h3>
+						</h2>
 						<p class="font-medium text-base text-muted-foreground">
 							{version.edition}
 						</p>

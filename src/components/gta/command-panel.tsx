@@ -30,9 +30,9 @@ export function CommandPanel({ manual, onManualSubmit }: CommandPanelProps) {
 			<div class="flex flex-col gap-6 pt-4 pb-1">
 				<ProbeCommand />
 				<div class="flex flex-col gap-1 border-ink/10 border-t pt-5">
-					<h3 class="font-semibold text-base text-foreground sm:text-lg">
+					<h2 class="font-semibold text-base text-foreground sm:text-lg">
 						Or enter your specs by hand
-					</h3>
+					</h2>
 					<ManualSpecsForm value={manual} onSubmit={onManualSubmit} />
 				</div>
 			</div>
