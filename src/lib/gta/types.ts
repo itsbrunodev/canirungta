@@ -60,6 +60,10 @@ export interface VersionReport {
 // Plain serializable image data, safe to pass from an .astro page into a client island.
 export interface CoverImage {
 	src: string;
+	srcSet?: string;
+	sizes?: string;
+	// Tiny blurred copy for the ambient glow behind a cover.
+	blurSrc?: string;
 	width: number;
 	height: number;
 	alt?: string;

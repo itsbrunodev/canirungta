@@ -57,20 +57,20 @@ export function VersionRow({
 			{cover && (
 				// Natural (vertical) aspect ratio, never cropped; height follows width.
 				<div class="relative w-24 shrink-0 self-start sm:sticky sm:top-8 sm:w-40 md:w-48 lg:w-64">
-					{/* Blurred copy behind the cover acts as ambient glow. */}
-					<img
-						class="absolute inset-0 h-full w-full scale-95 select-none rounded-xl opacity-50 blur-2xl sm:rounded-2xl"
-						src={cover.src}
-						alt=""
-						aria-hidden="true"
-						loading="lazy"
-						decoding="async"
-						draggable={false}
-					/>
+					{/* Tiny blurred background acts as ambient glow; decorative, so no image element. */}
+					{cover.blurSrc && (
+						<div
+							class="pointer-events-none absolute inset-0 h-full w-full scale-95 rounded-xl bg-center bg-cover opacity-50 blur-2xl sm:rounded-2xl"
+							style={{ backgroundImage: `url("${cover.blurSrc}")` }}
+							aria-hidden="true"
+						/>
+					)}
 					<div class="relative overflow-hidden rounded-xl shadow-2xl shadow-black/20 sm:rounded-2xl">
 						<img
 							class="block h-auto w-full"
 							src={cover.src}
+							srcSet={cover.srcSet}
+							sizes={cover.sizes}
 							width={cover.width}
 							height={cover.height}
 							alt={`${version.title} ${version.edition} cover`}

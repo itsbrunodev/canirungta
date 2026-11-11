@@ -1,6 +1,13 @@
 import { getImage } from "astro:assets";
 import type { ImageMetadata } from "astro";
 
+import {
+	COVER_BLUR_WIDTH,
+	COVER_FALLBACK_WIDTH,
+	COVER_SIZES,
+	COVER_WIDTHS,
+} from "@/constants/gta/cover-sizes";
+
 import type { CoverImage } from "@/lib/gta/types";
 
 import gta3Cover from "@/assets/cover/gta-3.webp";
@@ -29,23 +36,29 @@ const COVER_SOURCES: Record<string, ImageMetadata> = {
 	"gta-iii-original": gta3Cover,
 };
 
-// Thumbnails render at 224px tall (h-56); 448px is the 2x size for high-DPI screens.
-const COVER_HEIGHT = 448;
-
 // Call from an .astro frontmatter. Resized and converted to webp at build time.
 export async function getGtaCovers(): Promise<Record<string, CoverImage>> {
 	const entries = await Promise.all(
 		Object.entries(COVER_SOURCES).map(async ([id, src]) => {
-			const image = await getImage({
-				src,
-				height: COVER_HEIGHT,
-				format: "webp",
-			});
+			const [fallback, sized, blur] = await Promise.all([
+				getImage({
+					src,
+					width: COVER_FALLBACK_WIDTH,
+					format: "webp",
+					quality: 80,
+				}),
+				getImage({ src, widths: COVER_WIDTHS, format: "webp", quality: 80 }),
+				getImage({ src, width: COVER_BLUR_WIDTH, format: "webp", quality: 50 }),
+			]);
 
+			// Every width keeps the source aspect ratio, so one ratio serves the whole set.
 			const cover: CoverImage = {
-				src: image.src,
-				width: Number(image.attributes.width),
-				height: Number(image.attributes.height),
+				src: fallback.src,
+				srcSet: sized.srcSet.attribute,
+				sizes: COVER_SIZES,
+				blurSrc: blur.src,
+				width: COVER_FALLBACK_WIDTH,
+				height: Math.round((COVER_FALLBACK_WIDTH * src.height) / src.width),
 			};
 			return [id, cover] as const;
 		}),
