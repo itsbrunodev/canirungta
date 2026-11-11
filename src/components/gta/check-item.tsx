@@ -10,7 +10,7 @@ interface CheckItemProps {
 	delay?: number;
 }
 
-// "16.0 GB" -> big number + small unit; text like "Windows 11" stays whole.
+// "16 GB" -> big number + small unit; text like "Windows 11" stays whole.
 function splitFigure(actual: string): { value: string; unit: string } {
 	const match = /^(\d+(?:\.\d+)?)\s+(.+)$/.exec(actual);
 	return match

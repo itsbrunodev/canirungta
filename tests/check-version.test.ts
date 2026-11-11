@@ -121,7 +121,7 @@ describe("checkGtaVersion", () => {
 			],
 		});
 		expect(run(specs).checks.find((c) => c.label === "VRAM")?.actual).toBe(
-			"6.0 GB",
+			"6 GB",
 		);
 	});
 

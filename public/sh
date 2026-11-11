@@ -47,10 +47,15 @@ DISKS_TEXT=""
 UNIFIED_MEMORY="false"
 VULKAN_JSON="null"
 
-fmt_gb() { # bytes -> "32.0 GB", "unknown" when not a number
+fmt_gb() { # bytes -> "32 GB" or "512 MB", "unknown" when not a number
 	case "$1" in
 		'' | *[!0-9]*) printf 'unknown' ;;
-		*) awk -v b="$1" 'BEGIN { printf "%.1f GB", b / 1073741824 }' ;;
+		*) awk -v b="$1" 'BEGIN {
+			g = b / 1073741824
+			if (g < 1) { printf "%d MB", int(g * 1024 + 0.5); exit }
+			r = int(g * 10 + 0.5) / 10
+			if (r == int(r)) printf "%d GB", r; else printf "%.1f GB", r
+		}' ;;
 	esac
 }
 

@@ -42,7 +42,7 @@ export interface GtaVersion {
 export interface CheckRow {
 	label: string;
 	status: CheckStatus;
-	// Headline figure for the tile, e.g. "16.0 GB"; null when unknown.
+	// Headline figure for the tile, e.g. "16 GB"; null when unknown.
 	actual: string | null;
 	// Published minimum, e.g. "8 GB"; null for OS or when none exists.
 	required: string | null;

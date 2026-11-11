@@ -133,7 +133,11 @@ function Get-CanirungtaProbe {
 
 function Format-CanirungtaGb($bytes) {
 	if ($null -eq $bytes) { return 'unknown' }
-	return '{0:N1} GB' -f ($bytes / 1GB)
+	$gb = $bytes / 1GB
+	if ($gb -lt 1) { return '{0:0} MB' -f [math]::Round($bytes / 1MB) }
+	$rounded = [math]::Round($gb, 1)
+	if ($rounded -eq [math]::Floor($rounded)) { return '{0:0} GB' -f $rounded }
+	return '{0:0.0} GB' -f $rounded
 }
 
 # Mirrors the link: everything printed here is exactly what goes into it.

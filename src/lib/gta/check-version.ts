@@ -1,4 +1,5 @@
 import { checkCpu, checkGpuModel } from "@/lib/gta/check-hardware";
+import { formatGb, formatGbValue } from "@/lib/gta/format-gb";
 import type {
 	CheckRow,
 	GtaRequirement,
@@ -74,8 +75,8 @@ function checkRam(req: GtaRequirement, specs: MachineSpecs): CheckRow {
 	return {
 		label: "RAM",
 		status: actualGb >= min * TOLERANCE ? "pass" : "fail",
-		actual: `${actualGb.toFixed(1)} GB`,
-		required: `${min} GB`,
+		actual: formatGbValue(actualGb),
+		required: formatGb(min),
 		note: null,
 	};
 }
@@ -92,8 +93,8 @@ function checkVram(req: GtaRequirement, specs: MachineSpecs): CheckRow {
 	return {
 		label: "VRAM",
 		status: actualGb >= min * TOLERANCE ? "pass" : "fail",
-		actual: `${actualGb.toFixed(1)} GB`,
-		required: `${min} GB`,
+		actual: formatGbValue(actualGb),
+		required: formatGb(min),
 		note: best.shared ? "Shares system RAM" : null,
 	};
 }
@@ -111,8 +112,8 @@ function checkDisk(req: GtaRequirement, specs: MachineSpecs): CheckRow {
 		label: "Disk",
 		// No tolerance: unlike RAM, free space is not under-reported.
 		status: freeGb >= min ? "pass" : "fail",
-		actual: `${freeGb.toFixed(0)} GB free`,
-		required: `${min} GB`,
+		actual: `${formatGbValue(freeGb)} free`,
+		required: formatGb(min),
 		note:
 			specs.disks.length > 1 ? `Best of ${specs.disks.length} drives` : null,
 	};
@@ -233,7 +234,7 @@ function unknownRow(
 		label,
 		status: "unknown",
 		actual: null,
-		required: required === null ? null : `${required} GB`,
+		required: formatGb(required),
 		note,
 	};
 }
