@@ -1,3 +1,4 @@
+import { cleanWebglRenderer } from "@/lib/hardware/clean-gpu-name";
 import type { MachineSpecs, OsFamily } from "@/lib/machine/types";
 import type { SystemInfo } from "@/lib/system-info/types";
 
@@ -25,7 +26,13 @@ export function specsFromBrowser(info: SystemInfo): MachineSpecs {
 		gpus:
 			info.gpu.renderer === null
 				? []
-				: [{ name: info.gpu.renderer, vramBytes: null, integrated: false }],
+				: [
+						{
+							name: cleanWebglRenderer(info.gpu.renderer),
+							vramBytes: null,
+							integrated: false,
+						},
+					],
 		vulkan: null,
 	};
 }

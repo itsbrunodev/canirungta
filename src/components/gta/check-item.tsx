@@ -50,6 +50,7 @@ export function CheckItem({ check, delay = 0 }: CheckItemProps) {
 						class={`flex min-w-0 items-baseline gap-1.5 leading-none ${style.valueClassName}`}
 					>
 						<span
+							title={check.actual ?? "Unknown"}
 							class={
 								isName
 									? "line-clamp-2 font-semibold text-lg leading-tight tracking-tight sm:text-xl"

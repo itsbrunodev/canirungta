@@ -94,7 +94,7 @@ function checkVram(req: GtaRequirement, specs: MachineSpecs): CheckRow {
 		status: actualGb >= min * TOLERANCE ? "pass" : "fail",
 		actual: `${actualGb.toFixed(1)} GB`,
 		required: `${min} GB`,
-		note: best.shared ? `${best.name ?? "GPU"} (shares system RAM)` : best.name,
+		note: best.shared ? "Shares system RAM" : null,
 	};
 }
 

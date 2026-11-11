@@ -9,3 +9,20 @@ export function cleanGpuName(name: string | null): string | null {
 		.filter((text) => text && text !== "AMD/ATI");
 	return brackets.at(-1) ?? withoutRevision.trim();
 }
+
+// WebGL renderers on Chromium look like "ANGLE (NVIDIA Corporation, NVIDIA GeForce GTX 1650 SUPER/PCIe/SSE2, OpenGL ES 3.2)".
+// Keep just the model: the middle field, without vendor words, "(R)", hex ids or the "/PCIe/..." tail.
+export function cleanWebglRenderer(renderer: string | null): string | null {
+	if (!renderer) return renderer;
+	const angle = /^ANGLE \((.*)\)$/.exec(renderer.trim());
+	if (!angle?.[1]) return renderer.trim();
+	const fields = angle[1].split(", ");
+	const model = (fields[1] ?? fields[0] ?? "")
+		.split("/")[0]
+		?.replace(/\s*\(0x[0-9a-f]+\)/i, "")
+		.replace(/\s+Direct3D.*$/i, "")
+		.replace(/\((?:r|tm)\)/gi, "")
+		.replace(/^(?:nvidia|amd|intel)\s+(?:corporation\s+)?/i, "")
+		.trim();
+	return model || renderer.trim();
+}
