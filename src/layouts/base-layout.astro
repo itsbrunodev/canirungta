@@ -1,0 +1,101 @@
+---
+import { Font } from "astro:assets";
+
+import "@/styles/global.css";
+
+import { THEME_STORAGE_KEY } from "@/constants/storage-keys";
+
+import type { CoverImage } from "@/lib/gta/types";
+
+interface Props {
+	title?: string;
+	description?: string;
+	// Absolute-URL-ready share image; needs astro.config `site` to become an absolute URL.
+	image?: CoverImage;
+	noindex?: boolean;
+}
+
+const {
+	title = "Can I run GTA? Check every PC version of Grand Theft Auto",
+	description = "Check whether your PC can run every PC version of Grand Theft Auto, from GTA III to GTA V Enhanced.",
+	image,
+	noindex = false,
+} = Astro.props;
+
+const canonical = Astro.site
+	? new URL(Astro.url.pathname, Astro.site).href
+	: undefined;
+const imageUrl =
+	image && Astro.site ? new URL(image.src, Astro.site).href : undefined;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<meta name="description" content={description} />
+		<meta name="robots" content={noindex ? "noindex" : "index, follow"} />
+		<meta name="color-scheme" content="dark light" />
+		<meta name="theme-color" content="#060607" />
+		<!-- Inline + render-blocking on purpose: sets the theme before first paint, so no flash. Colors mirror lib/theme/theme.ts. -->
+		<script is:inline define:vars={{ key: THEME_STORAGE_KEY }}>
+			(() => {
+				let theme;
+				try {
+					theme = localStorage.getItem(key);
+				} catch {}
+				if (theme !== "light") theme = "dark";
+				document.documentElement.dataset.theme = theme;
+				document
+					.querySelector('meta[name="theme-color"]')
+					?.setAttribute("content", theme === "light" ? "#f6f7f9" : "#060607");
+			})();
+		</script>
+		{canonical && <link rel="canonical" href={canonical} />}
+		<link rel="icon" href="/favicon.ico" sizes="48x48" />
+		<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+		<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<link rel="manifest" href="/site.webmanifest" />
+		<link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable API docs" />
+		<link rel="service-desc" type="application/json" href="/openapi.json" />
+		<title>{title}</title>
+
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Can I run GTA?" />
+		<meta property="og:locale" content="en_US" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		{canonical && <meta property="og:url" content={canonical} />}
+		{
+			imageUrl && (
+				<>
+					<meta property="og:image" content={imageUrl} />
+					<meta property="og:image:width" content={String(image?.width)} />
+					<meta property="og:image:height" content={String(image?.height)} />
+					<meta property="og:image:alt" content={image?.alt ?? title} />
+				</>
+			)
+		}
+
+		<meta
+			name="twitter:card"
+			content={imageUrl ? "summary_large_image" : "summary"}
+		/>
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		{imageUrl && <meta name="twitter:image" content={imageUrl} />}
+		{imageUrl && <meta name="twitter:image:alt" content={image?.alt ?? title} />}
+		<Font cssVariable="--font-geist-sans" preload />
+		<Font cssVariable="--font-geist-mono" />
+	</head>
+	<body>
+		<a
+			href="#main"
+			class="bg-surface text-foreground focus-visible:outline-primary sr-only rounded-md px-4 py-2 focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus-visible:outline-2"
+			>Skip to content</a
+		>
+		<slot />
+	</body>
+</html>

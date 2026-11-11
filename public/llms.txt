@@ -1,0 +1,37 @@
+# Can I Run GTA?
+
+> Checks PC specs against the minimum requirements of every PC Grand Theft Auto release (GTA III to GTA V Enhanced, plus projected GTA VI). Free JSON API, no key needed.
+
+## Check a PC
+
+GET https://canirungta.com/api/check
+
+Query parameters (at least one of cpu, gpu, ram, vram, disk is required):
+
+- cpu: CPU model, e.g. `Ryzen 5 5600`
+- gpu: GPU model, e.g. `RTX 3060`
+- ram: system RAM in GB, e.g. `16`
+- vram: GPU memory in GB, e.g. `12`
+- disk: free disk space in GB, e.g. `200`
+- os: `windows` (default), `linux`, `macos` or `mobile`
+- windows: Windows major version, `10` (Windows 11 counts as 10) or older
+
+Example:
+
+https://canirungta.com/api/check?cpu=Ryzen%205%205600&gpu=RTX%203060&ram=16&vram=12&disk=200&os=windows&windows=10
+
+Response: JSON with `input`, `errors`, `warnings` and `results`, one per GTA version. Each result has a `verdict` and per-component `checks` (status pass/fail/unknown).
+
+Verdicts: `runs-well` (meets recommended), `runs` (meets minimum only), `cannot` (fails a minimum), `unknown` (missing or unrecognised specs; supply more), `needs-windows` (hardware fine, non-Windows OS needs Proton/Wine), `unsupported` (mobile).
+
+Omitted specs give `unknown` checks, never a pass. Unrecognised CPU/GPU names appear in `warnings`; retry with the exact marketing name.
+
+## Requirements data
+
+GET https://canirungta.com/api/versions.json: the published minimum/recommended specs per version, with source URLs and a `confidence` field (`official`, `approximate`, `unannounced`).
+
+## Other interfaces
+
+- OpenAPI 3.1 spec: https://canirungta.com/openapi.json (import as a GPT Action or any tool-calling client)
+- MCP server (streamable HTTP, stateless): https://canirungta.com/mcp, with one tool `check_gta_compatibility` taking the same parameters as /api/check (cpu, gpu, ram, vram, disk, os, windows)
+- Discovery: https://canirungta.com/.well-known/mcp.json

@@ -1,0 +1,295 @@
+@import "tailwindcss";
+
+/* Font files come from the Astro <Font> component; these tokens expose them as utilities (font-sans, font-mono). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Runtime theme values; base-layout's inline script sets data-theme before paint. Dark is the default. */
+:root {
+	--c-canvas: #060607;
+	--c-surface: #0f1012;
+	--c-border: #22252b;
+	--c-foreground: #f5f5f5;
+	--c-muted: #a1a7b3;
+	--c-primary: #3d8bff;
+	--c-accent: #33c3ff;
+	--c-pass: #22e39b;
+	--c-warning: #ffa200;
+	--c-fail: #ff3355;
+	/* Base for hairlines, fills and hovers: white on dark, black on light. */
+	--c-ink: #fff;
+	/* Start stop of the "GTA" headline gradient. */
+	--c-gta-from: #9cc6ff;
+	/* Command syntax highlight tokens. */
+	--c-tok-program: #6ee7b7;
+	--c-tok-url: #7dd3fc;
+	--c-tok-flag: #fcd34d;
+	--c-tok-env: #c4b5fd;
+	--grid-alpha: 2.2%;
+	--glass-bg: rgb(255 255 255 / 0.04);
+	--glass-border: rgb(255 255 255 / 0.09);
+	--blob-alpha: 3%;
+	/* Cards rely on the glass border in dark mode; shadows only help on light. */
+	--shadow-card: none;
+}
+
+/* Contrast (WCAG): foreground 17.6:1, muted 7.2:1, primary 5.9:1, accent 5.5:1, pass 5.3:1, warning 5.4:1, fail 5.9:1 on canvas. */
+:root[data-theme="light"] {
+	--c-canvas: #f6f7f9;
+	--c-surface: #ffffff;
+	--c-border: #d3d8e0;
+	--c-foreground: #0b0d12;
+	--c-muted: #4a5160;
+	--c-primary: #1456c8;
+	--c-accent: #00678f;
+	--c-pass: #0a7048;
+	--c-warning: #8a5000;
+	--c-fail: #c40f2d;
+	--c-ink: #000;
+	--c-gta-from: #2a66d9;
+	/* All >=7:1 on white / #f6f7f9. */
+	--c-tok-program: #065f46;
+	--c-tok-url: #075985;
+	--c-tok-flag: #92400e;
+	--c-tok-env: #5b21b6;
+	--grid-alpha: 5%;
+	--glass-bg: rgb(255 255 255 / 0.75);
+	--glass-border: rgb(0 0 0 / 0.14);
+	--blob-alpha: 7%;
+	--shadow-card:
+		0 1px 2px rgb(16 24 40 / 0.04), 0 6px 16px -6px rgb(16 24 40 / 0.06);
+}
+
+@theme inline {
+	--font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+	--font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+
+	--color-canvas: var(--c-canvas);
+	--color-surface: var(--c-surface);
+	--color-border: var(--c-border);
+	--color-foreground: var(--c-foreground);
+	--color-muted-foreground: var(--c-muted);
+	--color-primary: var(--c-primary);
+	--color-accent: var(--c-accent);
+	--color-pass: var(--c-pass);
+	--color-warning: var(--c-warning);
+	--color-fail: var(--c-fail);
+	--color-ink: var(--c-ink);
+	--color-gta-from: var(--c-gta-from);
+	--color-tok-program: var(--c-tok-program);
+	--color-tok-url: var(--c-tok-url);
+	--color-tok-flag: var(--c-tok-flag);
+	--color-tok-env: var(--c-tok-env);
+}
+
+@layer base {
+	:root {
+		color-scheme: dark;
+		/* Lets height animate to/from auto (used by the details disclosure). */
+		interpolate-size: allow-keywords;
+		/* Stops iOS inflating text after rotation. */
+		-webkit-text-size-adjust: 100%;
+		text-size-adjust: 100%;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	:root[data-theme="light"] {
+		color-scheme: light;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		html {
+			scroll-behavior: smooth;
+		}
+	}
+
+	body {
+		@apply bg-canvas text-foreground font-sans antialiased;
+		font-feature-settings: "tnum";
+	}
+
+	body {
+		position: relative;
+		/* Safety net: no stray horizontal scroll on narrow screens. */
+		overflow-x: clip;
+	}
+
+	/* Hairline grid, fixed so it stays behind the glass panels all the way down; masked so it only reads near the top and center. Fixed pseudo-element instead of background-attachment keeps mobile scrolling smooth. */
+	body::before {
+		content: "";
+		position: fixed;
+		inset: 0;
+		z-index: -2;
+		pointer-events: none;
+		background-image:
+			linear-gradient(
+				to right,
+				color-mix(in srgb, var(--c-ink) var(--grid-alpha), transparent) 1px,
+				transparent 1px
+			),
+			linear-gradient(
+				to bottom,
+				color-mix(in srgb, var(--c-ink) var(--grid-alpha), transparent) 1px,
+				transparent 1px
+			);
+		background-size: 32px 32px;
+		background-position: center top;
+		mask-image: radial-gradient(
+			ellipse 90% 85% at 50% 0,
+			#000 20%,
+			transparent 100%
+		);
+	}
+
+	/* Huge soft blobs: radial gradients fade to transparent on their own, so no blur filter is needed. Fixed so they sit behind the glass cards while scrolling. */
+	body::after {
+		content: "";
+		position: fixed;
+		inset: 0;
+		z-index: -1;
+		pointer-events: none;
+		background-image:
+			radial-gradient(
+				40rem 34rem at 12% 8%,
+				color-mix(in srgb, var(--c-primary) var(--blob-alpha), transparent),
+				transparent 100%
+			),
+			radial-gradient(
+				44rem 38rem at 92% 48%,
+				color-mix(in srgb, var(--c-accent) var(--blob-alpha), transparent),
+				transparent 100%
+			),
+			radial-gradient(
+				46rem 36rem at 20% 100%,
+				color-mix(in srgb, var(--c-primary) var(--blob-alpha), transparent),
+				transparent 100%
+			);
+	}
+
+	::selection {
+		@apply bg-primary/40 text-foreground;
+	}
+}
+
+/* Frosted panel: flat translucent fill, blur, hairline border. */
+@utility glass {
+	background-color: var(--glass-bg);
+	border: 1px solid var(--glass-border);
+	backdrop-filter: blur(20px) saturate(130%);
+}
+
+/* Smooth open/close for <details>; browsers without ::details-content just snap. */
+@utility details-smooth {
+	&::details-content {
+		block-size: 0;
+		overflow: hidden;
+		/* Room inside the clip for focus rings; the negative margin keeps content aligned. */
+		margin-inline: -0.25rem;
+		padding-inline: 0.25rem;
+		opacity: 0;
+		transition:
+			block-size 350ms cubic-bezier(0.16, 1, 0.3, 1),
+			opacity 250ms ease,
+			content-visibility 350ms allow-discrete;
+	}
+	&[open]::details-content {
+		block-size: auto;
+		opacity: 1;
+	}
+}
+
+/* Entrance motion: transform + opacity only, so it never causes layout shift. */
+@keyframes rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes pop {
+	from {
+		opacity: 0;
+		transform: scale(0.6);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@utility animate-rise {
+	animation: rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	animation-delay: var(--delay, 0ms);
+}
+
+@utility animate-pop {
+	animation: pop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+	animation-delay: calc(var(--delay, 0ms) + 500ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		/* biome-ignore lint/complexity/noImportantStyles: reduced-motion must beat every utility */
+		animation-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: same */
+		animation-delay: 0ms !important;
+	}
+}
+
+/* Native <dialog>: transitions + @starting-style animate both open and close. */
+.probe-dialog {
+	margin: auto;
+	width: min(40rem, calc(100% - 1.5rem));
+	max-height: calc(100dvh - 2rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	opacity: 0;
+	transform: translateY(16px) scale(0.96);
+	transition:
+		opacity 250ms ease,
+		transform 450ms cubic-bezier(0.16, 1, 0.3, 1),
+		overlay 450ms allow-discrete,
+		display 450ms allow-discrete;
+	&[open] {
+		opacity: 1;
+		transform: none;
+	}
+	&::backdrop {
+		background: rgb(0 0 0 / 0);
+		backdrop-filter: blur(0);
+		transition:
+			background 350ms ease,
+			backdrop-filter 350ms ease,
+			overlay 350ms allow-discrete,
+			display 350ms allow-discrete;
+	}
+	&[open]::backdrop {
+		background: rgb(0 0 0 / 0.6);
+		backdrop-filter: blur(6px);
+	}
+	@starting-style {
+		&[open] {
+			opacity: 0;
+			transform: translateY(16px) scale(0.96);
+		}
+		&[open]::backdrop {
+			background: rgb(0 0 0 / 0);
+			backdrop-filter: blur(0);
+		}
+	}
+}
+
+/* Staggered entrance for dialog content; --i is the item index. */
+.probe-dialog[open] .probe-rise {
+	animation: rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	animation-delay: calc(120ms + var(--i, 0) * 60ms);
+}

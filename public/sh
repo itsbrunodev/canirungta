@@ -1,0 +1,321 @@
+#!/bin/sh
+# canirungta system probe for Linux, macOS, BSD (and WSL / Git Bash via the Windows host).
+# Read-only: no installs, no writes. Sends only hardware facts, no hostname or user names.
+# Usage: curl -fsSL https://canirungta.com/sh | sh
+# Prints what it found, then asks before opening the result in a browser.
+# Set CANIRUNGTA_NO_OPEN=1 to print the result link without asking or opening.
+# Set CANIRUNGTA_ORIGIN to point at another site (dev: http://localhost:4321).
+
+# Whole script is wrapped in main() and called last, so a truncated download runs nothing.
+ORIGIN="${CANIRUNGTA_ORIGIN:-https://canirungta.com}"
+
+json_str() {
+	printf '"%s"' "$(printf '%s' "$1" | tr -d '\001-\037' | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+}
+
+# Empty means unknown; prints JSON null.
+json_str_or_null() {
+	if [ -n "$1" ]; then json_str "$1"; else printf 'null'; fi
+}
+
+json_num_or_null() {
+	case "$1" in
+		'' | *[!0-9]*) printf 'null' ;;
+		*) printf '%s' "$1" ;;
+	esac
+}
+
+# The link carries MiB, not bytes: same precision for the checks, fewer digits in the URL.
+mib_or_null() {
+	case "$1" in
+		'' | *[!0-9]*) printf 'null' ;;
+		*) printf '%s' $(($1 / 1048576)) ;;
+	esac
+}
+
+# Probes write these globals; emit_json serializes them.
+OS_FAMILY=""
+OS_NAME=""
+CPU_CORES=""
+CPU_MODEL=""
+MEM_BYTES=""
+GPUS_JSON=""
+DISKS_JSON=""
+# Human-readable lines for the terminal summary, built alongside the JSON.
+GPUS_TEXT=""
+DISKS_TEXT=""
+UNIFIED_MEMORY="false"
+VULKAN_JSON="null"
+
+fmt_gb() { # bytes -> "32.0 GB", "unknown" when not a number
+	case "$1" in
+		'' | *[!0-9]*) printf 'unknown' ;;
+		*) awk -v b="$1" 'BEGIN { printf "%.1f GB", b / 1073741824 }' ;;
+	esac
+}
+
+add_gpu() { # name, vram bytes, integrated (true/false)
+	integrated=0
+	if [ "${3:-false}" = true ]; then integrated=1; fi
+	entry=$(printf '[%s,%s,%s]' "$(json_str_or_null "$1")" "$(mib_or_null "$2")" "$integrated")
+	if [ -n "$GPUS_JSON" ]; then
+		GPUS_JSON="$GPUS_JSON,$entry"
+	else
+		GPUS_JSON=$entry
+	fi
+
+	detail=""
+	if [ -n "$2" ]; then detail="$(fmt_gb "$2") VRAM"; fi
+	if [ "$integrated" = 1 ]; then detail="${detail:+$detail, }integrated"; fi
+	GPUS_TEXT="$GPUS_TEXT$(printf '  %-8s%s%s' GPU "${1:-unknown}" "${detail:+ ($detail)}")
+"
+}
+
+# Mirrors emit_json: everything printed here is exactly what goes into the link.
+print_summary() {
+	echo "canirungta probe (nothing is sent until you open the link; the data stays in the URL fragment)"
+	echo
+	printf '  %-8s%s\n' OS "${OS_NAME:-unknown}"
+	printf '  %-8s%s (%s threads)\n' CPU "${CPU_MODEL:-unknown}" "${CPU_CORES:-?}"
+	mem="$(fmt_gb "$MEM_BYTES")"
+	if [ "$UNIFIED_MEMORY" = true ]; then mem="$mem (unified with GPU)"; fi
+	printf '  %-8s%s\n' RAM "$mem"
+	printf '%s' "$GPUS_TEXT"
+	printf '%s' "$DISKS_TEXT"
+	case "$VULKAN_JSON" in
+		true) vk=yes ;;
+		false) vk=no ;;
+		*) vk="not tested" ;;
+	esac
+	printf '  %-8s%s\n' Vulkan "$vk"
+	echo
+}
+
+# Needs a real terminal: under `curl | sh` stdin is the script, so ask via /dev/tty.
+confirm_open() {
+	( : </dev/tty ) 2>/dev/null || return 1
+	printf 'Open result in browser? [Y/n] ' >/dev/tty
+	read -r answer </dev/tty || return 1
+	case "$answer" in
+		n | N | no | NO | No) return 1 ;;
+	esac
+	return 0
+}
+
+# Positional array, version 3: [3, family letter, OS name, Windows major, 64-bit flag,
+# RAM MiB, unified, logical cores, [[gpu name, VRAM MiB, integrated]], [disk free MiB], vulkan,
+# CPU model]. Links from before the CPU model was added end at vulkan.
+# Windows major/bitness are only meaningful on Windows, so they stay null here.
+emit_json() {
+	family=$(printf '%s' "$OS_FAMILY" | cut -c1)
+	unified=0
+	if [ "$UNIFIED_MEMORY" = true ]; then unified=1; fi
+	printf '[3,%s,%s,null,null,%s,%s,%s,[%s],[%s],%s,%s]' \
+		"$(json_str_or_null "$family")" "$(json_str_or_null "$OS_NAME")" \
+		"$(mib_or_null "$MEM_BYTES")" "$unified" \
+		"$(json_num_or_null "$CPU_CORES")" "$GPUS_JSON" "$DISKS_JSON" "$VULKAN_JSON" \
+		"$(json_str_or_null "$CPU_MODEL")"
+}
+
+# Every local volume, since the game may be installed off $HOME's drive. Mount paths are not sent
+# (they can contain user names). $HOME's volume always counts; other rows must be real block devices.
+# Rows are deduped on size+free, which also collapses bind mounts and APFS volumes sharing a container.
+collect_disks() {
+	rows=$({
+		df -Pk "$HOME" 2>/dev/null | sed -n '2s/^/H /p'
+		df -Pk 2>/dev/null | sed '1d; s/^/D /'
+	} | awk '
+		{
+			ok = ($1 == "H") || ($2 ~ "^/dev/" && $2 !~ "^/dev/loop" && $7 !~ "^/(boot|efi|snap|private|System/Volumes/(VM|Preboot|Update|xarts|iSCPreboot|Hardware))")
+			key = $3 ":" $5
+			if (ok && !(key in seen)) { seen[key] = 1; print $5 * 1024 "|" $3 * 1024 }
+		}')
+	while IFS='|' read -r free total; do
+		[ -n "$free" ] || continue
+		entry=$(mib_or_null "$free")
+		if [ -n "$DISKS_JSON" ]; then DISKS_JSON="$DISKS_JSON,$entry"; else DISKS_JSON=$entry; fi
+		DISKS_TEXT="$DISKS_TEXT$(printf '  %-8s%s free of %s' Disk "$(fmt_gb "$free")" "$(fmt_gb "$total")")
+"
+	done <<EOF
+$rows
+EOF
+}
+
+# nvidia-smi reports VRAM in MiB, one line per GPU in bus order.
+nvidia_vram_bytes() { # index of the nth NVIDIA GPU
+	command -v nvidia-smi >/dev/null 2>&1 || return 0
+	mib=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null |
+		sed -n "$(($1 + 1))p" | tr -d ' ')
+	if [ -n "$mib" ]; then echo $((mib * 1048576)); fi
+	return 0
+}
+
+collect_linux_gpus() {
+	nv_index=0
+	# Walk DRM cards: gives VRAM for amdgpu, driver name for all. Connector entries like card0-DP-1 have no vendor file.
+	for dev in /sys/class/drm/card[0-9]*/device; do
+		[ -f "$dev/vendor" ] || continue
+		slot=$(basename "$(readlink -f "$dev")")
+		name=$(lspci -s "$slot" -mm 2>/dev/null | awk -F'"' '{ print $4 " " $6 }')
+		driver=$(basename "$(readlink -f "$dev/driver" 2>/dev/null)")
+		vram=$(cat "$dev/mem_info_vram_total" 2>/dev/null)
+		if [ -z "$vram" ] && [ "$driver" = nvidia ]; then
+			vram=$(nvidia_vram_bytes "$nv_index")
+		fi
+		if [ "$driver" = nvidia ]; then nv_index=$((nv_index + 1)); fi
+		# Intel iGPUs have no VRAM node; AMD APUs expose a small carve-out plus shared GTT memory.
+		integrated=false
+		case "$driver" in
+			i915 | xe) integrated=true ;;
+			amdgpu)
+				gtt=$(cat "$dev/mem_info_gtt_total" 2>/dev/null)
+				if [ -n "$vram" ] && [ -n "$gtt" ] && [ "$vram" -lt 2147483648 ] 2>/dev/null; then integrated=true; fi
+				;;
+		esac
+		add_gpu "$name" "$vram" "$integrated"
+	done
+
+	# No DRM nodes (containers, minimal setups): fall back to lspci names only.
+	if [ -z "$GPUS_JSON" ] && command -v lspci >/dev/null 2>&1; then
+		lines=$(lspci -mm 2>/dev/null | grep -Ei 'VGA|3D|Display')
+		while IFS= read -r line; do
+			name=$(printf '%s\n' "$line" | awk -F'"' '{ print $4 " " $6 }')
+			add_gpu "$name" "" false
+		done <<EOF
+$lines
+EOF
+	fi
+}
+
+vulkan_probe() {
+	if ! command -v vulkaninfo >/dev/null 2>&1; then
+		VULKAN_JSON="null"
+	elif vulkaninfo --summary >/dev/null 2>&1; then
+		VULKAN_JSON="true"
+	else
+		VULKAN_JSON="false"
+	fi
+}
+
+probe_linux() {
+	OS_FAMILY="linux"
+	OS_NAME=$(. /etc/os-release 2>/dev/null && printf '%s' "$PRETTY_NAME")
+	CPU_CORES=$(nproc 2>/dev/null)
+	CPU_MODEL=$(awk -F': ' '/^model name/ { print $2; exit }' /proc/cpuinfo 2>/dev/null)
+	MEM_BYTES=$(awk '/^MemTotal:/ { print $2 * 1024 }' /proc/meminfo 2>/dev/null)
+	collect_disks
+	collect_linux_gpus
+	vulkan_probe
+}
+
+# Under Rosetta, machdep.cpu.brand_string reads "VirtualApple @ 2.50GHz", so Apple Silicon asks
+# system_profiler for the real chip ("Apple M2 Pro"). Intel Macs keep the sysctl string, which
+# carries the full model number.
+mac_cpu_model() {
+	if [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = 1 ]; then
+		chip=$(system_profiler SPHardwareDataType 2>/dev/null | awk -F': ' '/^ *Chip:/ { print $2; exit }')
+		if [ -n "$chip" ]; then
+			printf '%s' "$chip"
+			return
+		fi
+	fi
+	sysctl -n machdep.cpu.brand_string 2>/dev/null
+}
+
+probe_macos() {
+	OS_FAMILY="darwin"
+	OS_NAME="$(sw_vers -productName 2>/dev/null) $(sw_vers -productVersion 2>/dev/null)"
+	CPU_CORES=$(sysctl -n hw.logicalcpu 2>/dev/null)
+	CPU_MODEL=$(mac_cpu_model)
+	MEM_BYTES=$(sysctl -n hw.memsize 2>/dev/null)
+	collect_disks
+	# Apple Silicon (also true under Rosetta): the GPU shares system RAM, so there is no separate VRAM.
+	if [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = 1 ]; then
+		UNIFIED_MEMORY="true"
+	fi
+
+	# One "name|VRAM bytes|integrated" row per GPU. Apple Silicon has no VRAM line (unified memory);
+	# Intel Macs list "VRAM (Total)" for discrete cards and "VRAM (Dynamic, Max)" for the iGPU.
+	# Apple and Intel graphics borrow system RAM; AMD/NVIDIA cards do not.
+	lines=$(system_profiler SPDisplaysDataType 2>/dev/null | awk -F': ' '
+		function flush() {
+			if (name != "") print name "|" bytes "|" ((name ~ /^(Apple|Intel)/) ? "true" : "false")
+		}
+		/Chipset Model/ { flush(); name = $2; bytes = "" }
+		/VRAM/ {
+			v = $2
+			m = (v ~ /GB/) ? 1073741824 : (v ~ /MB/) ? 1048576 : 0
+			if (m) bytes = int(v + 0) * m
+		}
+		END { flush() }')
+	while IFS='|' read -r name bytes integrated; do
+		[ -n "$name" ] && add_gpu "$name" "$bytes" "$integrated"
+	done <<EOF
+$lines
+EOF
+	VULKAN_JSON="null"
+}
+
+probe_bsd() {
+	OS_FAMILY="bsd"
+	OS_NAME=$(uname -sr)
+	CPU_CORES=$(sysctl -n hw.ncpu 2>/dev/null)
+	CPU_MODEL=$(sysctl -n hw.model 2>/dev/null)
+	MEM_BYTES=$(sysctl -n hw.physmem 2>/dev/null)
+	collect_disks
+}
+
+# Native Windows has no sh, so hand off to the PowerShell probe on the host.
+run_windows_host() {
+	if ! command -v powershell.exe >/dev/null 2>&1; then
+		echo "canirungta: powershell.exe not found. Run the Windows probe from PowerShell: irm $ORIGIN/ps | iex" >&2
+		return 1
+	fi
+	powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "\$env:CANIRUNGTA_ORIGIN='$ORIGIN'; irm $ORIGIN/ps | iex"
+}
+
+open_result() { # JSON as the only argument
+	# Fragment is never sent to the server: the data stays in the browser.
+	# URL-safe base64 without padding, straight after "#", to keep the link short.
+	encoded=$(printf '%s' "$1" | base64 | tr -d '\n=' | tr '+/' '-_')
+	url="$ORIGIN/#$encoded"
+	echo "Result: $url"
+	if [ -n "${CANIRUNGTA_NO_OPEN:-}" ]; then
+		return 0
+	fi
+	# No terminal to ask on (CI, pipes): print only, never open silently.
+	confirm_open || return 0
+	if command -v xdg-open >/dev/null 2>&1; then
+		xdg-open "$url" >/dev/null 2>&1 &
+	elif command -v open >/dev/null 2>&1; then
+		open "$url"
+	fi
+}
+
+main() {
+	kernel=$(uname -s 2>/dev/null)
+	case "$kernel" in
+		Linux)
+			# WSL: GTA runs on the Windows host, so its hardware is the one that matters.
+			if grep -qi microsoft /proc/version 2>/dev/null; then
+				run_windows_host
+				return
+			fi
+			probe_linux
+			;;
+		Darwin) probe_macos ;;
+		FreeBSD | OpenBSD | NetBSD | DragonFly) probe_bsd ;;
+		MINGW* | MSYS* | CYGWIN*)
+			run_windows_host
+			return
+			;;
+		*)
+			echo "canirungta: unsupported OS '$kernel'" >&2
+			return 1
+			;;
+	esac
+	print_summary
+	open_result "$(emit_json)"
+}
+
+main "$@"

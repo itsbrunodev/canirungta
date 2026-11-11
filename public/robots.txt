@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# AI crawlers welcome; API docs at /llms.txt
+Sitemap: https://canirungta.com/sitemap-index.xml

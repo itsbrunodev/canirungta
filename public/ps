@@ -1,0 +1,200 @@
+# canirungta system probe for Windows. Read-only: no installs, no writes.
+# Sends only hardware facts, no hostname or user names.
+# Usage: irm https://canirungta.com/ps | iex
+# Prints what it found, then asks before opening the result in a browser.
+# Set $env:CANIRUNGTA_NO_OPEN = 1 to print the result link without asking or opening.
+# Set $env:CANIRUNGTA_ORIGIN to point at another site (dev: http://localhost:4321).
+
+# qwMemorySize is a QWORD on most drivers but a REG_BINARY byte array on some.
+function ConvertTo-CanirungtaUInt64($value) {
+	if ($value -is [byte[]]) {
+		$padded = New-Object byte[] 8
+		[Array]::Copy($value, $padded, [Math]::Min($value.Length, 8))
+		return [BitConverter]::ToUInt64($padded, 0)
+	}
+	return [uint64]$value
+}
+
+function Get-CanirungtaVramEntries {
+	# Win32_VideoController.AdapterRAM is 32-bit and caps at 4 GB, so read the driver registry key for the real size.
+	$classKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
+	@(
+		Get-ChildItem $classKey -ErrorAction SilentlyContinue |
+			Where-Object { $_.PSChildName -match '^\d{4}$' } |
+			ForEach-Object {
+				$props = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
+				if ($props.'HardwareInformation.qwMemorySize') {
+					[pscustomobject]@{
+						Desc = $props.DriverDesc
+						DeviceId = $props.MatchingDeviceId
+						Bytes = ConvertTo-CanirungtaUInt64 $props.'HardwareInformation.qwMemorySize'
+					}
+				}
+			}
+	)
+}
+
+# nvidia-smi ships with the NVIDIA driver and lists cards in bus order. It is the fallback when
+# the registry has no size for a card (some drivers omit the key).
+function Get-CanirungtaNvidiaVram {
+	$smi = Get-Command nvidia-smi -ErrorAction SilentlyContinue
+	if (-not $smi) { return @() }
+	@(
+		& $smi.Source --query-gpu=name,memory.total --format=csv,noheader,nounits 2>$null |
+			ForEach-Object {
+				$parts = $_ -split ',\s*'
+				if ($parts.Count -ge 2 -and $parts[1] -match '^\d+$') {
+					[pscustomobject]@{ Name = $parts[0].Trim(); Bytes = [uint64]$parts[1] * 1MB }
+				}
+			}
+	)
+}
+
+function Get-CanirungtaGpus {
+	$entries = Get-CanirungtaVramEntries
+	$controllers = @(Get-CimInstance Win32_VideoController)
+	$nvidia = @(Get-CanirungtaNvidiaVram)
+
+	# Real GPUs sit on the PCI bus; remote-desktop, virtual-display and capture drivers do not.
+	$physical = @($controllers | Where-Object { $_.PNPDeviceID -like 'PCI\*' })
+	if ($physical.Count -gt 0) { $controllers = $physical }
+
+	@(
+		foreach ($gpu in $controllers) {
+			# Match by hardware ID first so two cards with the same name keep separate figures.
+			$match = $entries | Where-Object {
+				$_.DeviceId -and $gpu.PNPDeviceID -like "$($_.DeviceId)*"
+			} | Select-Object -First 1
+			if (-not $match) {
+				$match = $entries | Where-Object { $_.Desc -eq $gpu.Name } | Select-Object -First 1
+			}
+
+			$bytes = $null
+			$smi = $nvidia | Where-Object { $gpu.Name -like "*$($_.Name)*" } | Select-Object -First 1
+			if ($match) {
+				$bytes = $match.Bytes
+			} elseif ($smi) {
+				$bytes = $smi.Bytes
+			} elseif ($gpu.AdapterRAM -gt 0 -and $gpu.AdapterRAM -lt 4294967295) {
+				# Under 4 GB the 32-bit field is still accurate.
+				$bytes = [uint64]$gpu.AdapterRAM
+			}
+
+			# Integrated GPUs borrow system RAM, which the registry size does not reflect.
+			# Radeon 680M / 780M / 8060S have no "RX"; discrete laptop cards (RX 6600M) do.
+			$integrated = $gpu.Name -match 'Intel.*(UHD|Iris|HD Graphics|Arc.*Graphics)|Radeon(\(TM\))? Graphics|Radeon(\(TM\))? \d{3,4}[MS]\b|Radeon.*Vega \d+ Graphics|Adreno|Qualcomm'
+
+			[ordered]@{
+				name = "$($gpu.Name)".Trim()
+				vramBytes = $bytes
+				driver = $gpu.DriverVersion
+				integrated = [bool]$integrated
+			}
+		}
+	)
+}
+
+# Local fixed drives only: the game may be installed off the system drive.
+function Get-CanirungtaDisks {
+	@(
+		Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' |
+			Where-Object { $_.Size } |
+			ForEach-Object {
+				[ordered]@{
+					freeBytes = [uint64]$_.FreeSpace
+					totalBytes = [uint64]$_.Size
+				}
+			}
+	)
+}
+
+function Get-CanirungtaProbe {
+	$os = Get-CimInstance Win32_OperatingSystem
+	$cs = Get-CimInstance Win32_ComputerSystem
+	$processors = @(Get-CimInstance Win32_Processor)
+	$logicalCores = ($processors | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
+
+	return [ordered]@{
+		os = [ordered]@{
+			family = 'windows'
+			name = "$($os.Caption)".Trim()
+			version = $os.Version
+			arch = $os.OSArchitecture
+		}
+		cpu = [ordered]@{
+			logicalCores = $logicalCores
+			model = "$(($processors | Select-Object -First 1).Name)".Trim()
+		}
+		memory = [ordered]@{ totalBytes = [uint64]$cs.TotalPhysicalMemory; unified = $false }
+		gpus = @(Get-CanirungtaGpus)
+		disks = @(Get-CanirungtaDisks)
+	}
+}
+
+function Format-CanirungtaGb($bytes) {
+	if ($null -eq $bytes) { return 'unknown' }
+	return '{0:N1} GB' -f ($bytes / 1GB)
+}
+
+# Mirrors the link: everything printed here is exactly what goes into it.
+function Write-CanirungtaSummary($probe) {
+	Write-Output 'canirungta probe (nothing is sent until you open the link; the data stays in the URL fragment)'
+	Write-Output ''
+	Write-Output ('  {0,-8}{1}' -f 'OS', $probe.os.name)
+	Write-Output ('  {0,-8}{1} ({2} threads)' -f 'CPU', $probe.cpu.model, $probe.cpu.logicalCores)
+	Write-Output ('  {0,-8}{1}' -f 'RAM', (Format-CanirungtaGb $probe.memory.totalBytes))
+	foreach ($gpu in $probe.gpus) {
+		$detail = @()
+		if ($null -ne $gpu.vramBytes) { $detail += "$(Format-CanirungtaGb $gpu.vramBytes) VRAM" }
+		if ($gpu.integrated) { $detail += 'integrated' }
+		$suffix = if ($detail.Count -gt 0) { " ($($detail -join ', '))" } else { '' }
+		Write-Output ('  {0,-8}{1}{2}' -f 'GPU', $gpu.name, $suffix)
+	}
+	foreach ($disk in $probe.disks) {
+		Write-Output ('  {0,-8}{1} free of {2}' -f 'Disk', (Format-CanirungtaGb $disk.freeBytes), (Format-CanirungtaGb $disk.totalBytes))
+	}
+	Write-Output ('  {0,-8}{1}' -f 'Vulkan', 'not tested')
+	Write-Output ''
+}
+
+function ConvertTo-CanirungtaJsonValue($value) {
+	if ($null -eq $value) { return 'null' }
+	return ConvertTo-Json -InputObject $value -Compress
+}
+
+function ConvertTo-CanirungtaMib($bytes) {
+	if ($null -eq $bytes) { return 'null' }
+	return [string][math]::Floor($bytes / 1MB)
+}
+
+# Positional array, version 3 (same layout as public/sh, CPU model last), built by hand because
+# ConvertTo-Json unrolls single-element arrays. The link carries MiB to stay short.
+function ConvertTo-CanirungtaLinkJson($probe) {
+	$major = ($probe.os.version -split '\.')[0]
+	$is64 = if ($probe.os.arch -match '64') { '1' } elseif ($probe.os.arch -match '32') { '0' } else { 'null' }
+	$gpus = @($probe.gpus | ForEach-Object {
+		$integrated = if ($_.integrated) { '1' } else { '0' }
+		"[$(ConvertTo-CanirungtaJsonValue $_.name),$(ConvertTo-CanirungtaMib $_.vramBytes),$integrated]"
+	}) -join ','
+	$disks = @($probe.disks | ForEach-Object { ConvertTo-CanirungtaMib $_.freeBytes }) -join ','
+	return "[3,`"w`",$(ConvertTo-CanirungtaJsonValue $probe.os.name),$major,$is64,$(ConvertTo-CanirungtaMib $probe.memory.totalBytes),0,$($probe.cpu.logicalCores),[$gpus],[$disks],null,$(ConvertTo-CanirungtaJsonValue $probe.cpu.model)]"
+}
+
+$probe = Get-CanirungtaProbe
+$json = ConvertTo-CanirungtaLinkJson $probe
+# URL-safe base64 without padding, straight after "#", to keep the link short.
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+$origin = if ($env:CANIRUNGTA_ORIGIN) { $env:CANIRUNGTA_ORIGIN } else { 'https://canirungta.com' }
+$url = "$origin/#$encoded"
+
+Write-CanirungtaSummary $probe
+Write-Output "Result: $url"
+if (-not $env:CANIRUNGTA_NO_OPEN) {
+	# Non-interactive hosts (CI, piped) cannot answer: print only, never open silently.
+	if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
+		$answer = Read-Host 'Open result in browser? [Y/n]'
+		if ($answer -notmatch '^(n|no)$') {
+			Start-Process $url
+		}
+	}
+}
