@@ -194,6 +194,14 @@
 	&[open]::details-content {
 		block-size: auto;
 		opacity: 1;
+		/* Once open, popups (the spec suggestions) may extend past the panel. Flips only after the
+		   height animation, so content is still clipped while it grows. */
+		overflow: visible;
+		transition:
+			block-size 350ms cubic-bezier(0.16, 1, 0.3, 1),
+			opacity 250ms ease,
+			content-visibility 350ms allow-discrete,
+			overflow 0s 350ms allow-discrete;
 	}
 }
 

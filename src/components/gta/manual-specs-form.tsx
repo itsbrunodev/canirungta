@@ -1,5 +1,12 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 
+import { HardwareCombobox } from "@/components/gta/hardware-combobox";
+
+import { MANUAL_INPUT_CLASS } from "@/constants/gta/manual-input-class";
+
+import { scoreCpu } from "@/lib/hardware/score-cpu";
+import { scoreGpu } from "@/lib/hardware/score-gpu";
+import { suggestCpus, suggestGpus } from "@/lib/hardware/suggest-hardware";
 import {
 	EMPTY_MANUAL_SPECS,
 	type ManualSpecs,
@@ -10,12 +17,34 @@ interface ManualSpecsFormProps {
 	onSubmit: (specs: ManualSpecs) => void;
 }
 
-const INPUT_CLASS =
-	"glass h-10 w-full rounded-xl px-3 text-base text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-accent sm:h-9 sm:text-sm";
+const INPUT_CLASS = MANUAL_INPUT_CLASS;
+// Enough to cover a model's variants (Ti, SUPER, XT) without a scrolling list.
+const SUGGESTION_COUNT = 6;
+
+function searchCpus(text: string) {
+	return suggestCpus(text, SUGGESTION_COUNT);
+}
+
+function searchGpus(text: string) {
+	return suggestGpus(text, SUGGESTION_COUNT);
+}
+
+function isCpu(text: string) {
+	return scoreCpu(text) !== null;
+}
+
+function isGpu(text: string) {
+	return scoreGpu(text) !== null;
+}
 
 // Fallback for when detection leaves gaps and the visitor would rather type than run a script.
 export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 	const [draft, setDraft] = useState(toDraft(value));
+
+	// Saved, linked or agent-entered specs arrive after mount; show them in the fields.
+	useEffect(() => {
+		setDraft(toDraft(value));
+	}, [value]);
 
 	function update(field: keyof Draft, text: string) {
 		setDraft({ ...draft, [field]: text });
@@ -32,7 +61,11 @@ export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 	}
 
 	return (
-		<form class="flex flex-col gap-4" onSubmit={submit}>
+		<form
+			class="flex flex-col gap-4"
+			aria-label="Enter your PC specs"
+			onSubmit={submit}
+		>
 			<p class="text-muted-foreground text-sm sm:text-xs">
 				Fill in only what you know; it replaces what was detected. Stays in this
 				browser.
@@ -43,12 +76,14 @@ export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 					label="CPU model"
 					hint="e.g. Ryzen 5 3600 or Core i7-9700K"
 				>
-					<input
-						class={INPUT_CLASS}
-						value={draft.cpuModel}
-						maxLength={120}
+					<HardwareCombobox
 						id="manual-cpuModel"
-						onInput={(event) => update("cpuModel", event.currentTarget.value)}
+						name="cpuModel"
+						listLabel="CPU suggestions"
+						value={draft.cpuModel}
+						onChange={(text) => update("cpuModel", text)}
+						search={searchCpus}
+						isRecognised={isCpu}
 					/>
 				</Field>
 				<Field
@@ -56,12 +91,14 @@ export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 					label="GPU model"
 					hint="e.g. GeForce RTX 3060 or RX 6600"
 				>
-					<input
-						class={INPUT_CLASS}
-						value={draft.gpuName}
-						maxLength={120}
+					<HardwareCombobox
 						id="manual-gpuName"
-						onInput={(event) => update("gpuName", event.currentTarget.value)}
+						name="gpuName"
+						listLabel="GPU suggestions"
+						value={draft.gpuName}
+						onChange={(text) => update("gpuName", text)}
+						search={searchGpus}
+						isRecognised={isGpu}
 					/>
 				</Field>
 				<Field id="manual-ramGb" label="RAM (GB)" hint="Total installed memory">
@@ -73,6 +110,8 @@ export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 						inputMode="decimal"
 						value={draft.ramGb}
 						id="manual-ramGb"
+						aria-describedby="manual-ramGb-hint"
+						name="ramGb"
 						onInput={(event) => update("ramGb", event.currentTarget.value)}
 					/>
 				</Field>
@@ -89,6 +128,8 @@ export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 						inputMode="decimal"
 						value={draft.vramGb}
 						id="manual-vramGb"
+						aria-describedby="manual-vramGb-hint"
+						name="vramGb"
 						onInput={(event) => update("vramGb", event.currentTarget.value)}
 					/>
 				</Field>
@@ -105,6 +146,8 @@ export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 						inputMode="decimal"
 						value={draft.diskFreeGb}
 						id="manual-diskFreeGb"
+						aria-describedby="manual-diskFreeGb-hint"
+						name="diskFreeGb"
 						onInput={(event) => update("diskFreeGb", event.currentTarget.value)}
 					/>
 				</Field>
@@ -142,7 +185,9 @@ function Field({ id, label, hint, children }: FieldProps) {
 				{label}
 			</label>
 			{children}
-			<span class="text-muted-foreground text-xs">{hint}</span>
+			<span id={`${id}-hint`} class="text-muted-foreground text-xs">
+				{hint}
+			</span>
 		</div>
 	);
 }

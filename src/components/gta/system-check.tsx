@@ -15,12 +15,14 @@ import {
 	type ManualSpecs,
 	saveManualSpecs,
 } from "@/lib/machine/manual-specs";
+import { manualSpecsFromQuery } from "@/lib/machine/manual-specs-from-query";
 import { loadProbe, saveProbe } from "@/lib/machine/probe-storage";
 import { readProbeFromHash } from "@/lib/machine/read-probe-fragment";
 import { specsFromBrowser } from "@/lib/machine/specs-from-browser";
 import { specsFromProbe } from "@/lib/machine/specs-from-probe";
 import type { MachineSpecs } from "@/lib/machine/types";
 import { getSystemInfo } from "@/lib/system-info/get-system-info";
+import { registerCheckTool } from "@/lib/webmcp/register-check-tool";
 
 interface SystemCheckProps {
 	// Keyed by version id; built by getGtaCovers() in index.astro.
@@ -42,7 +44,14 @@ export function SystemCheck({ covers }: SystemCheckProps) {
 		void loadSpecs().then((result) => {
 			if (!cancelled) setLoaded(result);
 		});
-		setManual(loadManualSpecs());
+		// Specs in the URL (a shared or AI-built link) win for this visit, without replacing saved ones.
+		setManual(
+			manualSpecsFromQuery(window.location.search) ?? loadManualSpecs(),
+		);
+		registerCheckTool((next) => {
+			setManual(next);
+			saveManualSpecs(next);
+		});
 		return () => {
 			cancelled = true;
 		};
@@ -51,6 +60,10 @@ export function SystemCheck({ covers }: SystemCheckProps) {
 	function submitManual(next: ManualSpecs) {
 		setManual(next);
 		saveManualSpecs(next);
+		// Typed values replace any from the link, so drop them from the address bar.
+		if (window.location.search) {
+			history.replaceState(null, "", window.location.pathname);
+		}
 	}
 
 	const specs = loaded ? applyManualSpecs(loaded.specs, manual) : null;
