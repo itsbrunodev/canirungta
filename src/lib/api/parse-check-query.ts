@@ -1,3 +1,5 @@
+import { SPEC_PARAM_NAMES, VERSION_IDS } from "@/constants/api/check-params";
+
 import type { MachineSpecs, OsFamily } from "@/lib/machine/types";
 
 const GIB = 1024 ** 3;
@@ -19,6 +21,8 @@ export interface CheckQuery {
 	diskFreeGb: number | null;
 	os: string;
 	windowsMajor: number | null;
+	// Version ids to report on; null = all.
+	versions: string[] | null;
 }
 
 export interface ParsedCheckQuery {
@@ -28,11 +32,18 @@ export interface ParsedCheckQuery {
 	errors: string[];
 }
 
+// os, windows and version only shape the check; without hardware there is nothing to compare.
+export function hasSpecParams(params: URLSearchParams): boolean {
+	return SPEC_PARAM_NAMES.some((name) => params.get(name)?.trim());
+}
+
 export function parseCheckQuery(params: URLSearchParams): ParsedCheckQuery {
 	const errors: string[] = [];
 	const osName = (params.get("os") ?? "windows").trim().toLowerCase();
 	const osFamily = OS_BY_NAME[osName];
-	if (!osFamily) errors.push(`os must be one of: ${Object.keys(OS_BY_NAME)}`);
+	if (!osFamily) {
+		errors.push(`os must be one of: ${Object.keys(OS_BY_NAME).join(", ")}`);
+	}
 
 	const query: CheckQuery = {
 		cpu: text(params.get("cpu")),
@@ -42,7 +53,11 @@ export function parseCheckQuery(params: URLSearchParams): ParsedCheckQuery {
 		diskFreeGb: number(params, "disk", errors),
 		os: osFamily ? osName : "windows",
 		windowsMajor: number(params, "windows", errors),
+		versions: versions(params.get("version"), errors),
 	};
+	if (query.vramGb !== null && query.gpu === null) {
+		errors.push("vram is ignored without gpu; pass the GPU model too");
+	}
 
 	const specs: MachineSpecs = {
 		source: "probe",
@@ -91,4 +106,21 @@ function number(
 		return null;
 	}
 	return value;
+}
+
+// Unknown ids are reported and dropped; if none survive, every version is returned.
+function versions(raw: string | null, errors: string[]): string[] | null {
+	const ids = (raw ?? "")
+		.split(",")
+		.map((id) => id.trim().toLowerCase())
+		.filter(Boolean);
+	const known = ids.filter((id) => VERSION_IDS.includes(id));
+	for (const id of ids) {
+		if (!known.includes(id)) {
+			errors.push(
+				`unknown version "${id.slice(0, MAX_TEXT)}"; valid ids: ${VERSION_IDS.join(", ")}`,
+			);
+		}
+	}
+	return known.length > 0 ? [...new Set(known)] : null;
 }

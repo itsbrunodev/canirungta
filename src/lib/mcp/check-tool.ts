@@ -1,11 +1,17 @@
-import { CHECK_PARAMS, CHECK_SUMMARY } from "@/constants/api/check-params";
+import {
+	CHECK_PARAMS,
+	CHECK_SUMMARY,
+	SPEC_PARAM_NAMES,
+} from "@/constants/api/check-params";
 
 import { buildCheckResponse } from "@/lib/api/build-check-response";
-import { parseCheckQuery } from "@/lib/api/parse-check-query";
+import { hasSpecParams, parseCheckQuery } from "@/lib/api/parse-check-query";
+import { toolResult, toSearchParams } from "@/lib/mcp/tool-result";
 
 export const CHECK_TOOL = {
 	name: "check_gta_compatibility",
-	description: `${CHECK_SUMMARY} Provide at least one of cpu, gpu, ram, vram, disk.`,
+	title: "Check GTA compatibility",
+	description: `${CHECK_SUMMARY} Provide at least one of ${SPEC_PARAM_NAMES.join(", ")}; ask the user for missing ones rather than guessing. Each result has a verdict, a one-line summary and per-component checks; resultsUrl opens the same check for the user.`,
 	inputSchema: {
 		type: "object",
 		properties: Object.fromEntries(
@@ -19,22 +25,12 @@ export const CHECK_TOOL = {
 };
 
 export function runCheckTool(args: Record<string, unknown>) {
-	const params = new URLSearchParams();
-	for (const [key, value] of Object.entries(args)) {
-		if (typeof value === "string" || typeof value === "number") {
-			params.set(key, String(value));
-		}
+	const params = toSearchParams(args);
+	if (!hasSpecParams(params)) {
+		return toolResult(
+			{ error: `Pass at least one of: ${SPEC_PARAM_NAMES.join(", ")}.` },
+			true,
+		);
 	}
-	const hasSpecs = [...params.keys()].some((key) => key !== "os");
-	if (!hasSpecs) {
-		return toolResult({ error: "Pass at least one spec." }, true);
-	}
-	return toolResult(buildCheckResponse(parseCheckQuery(params)), false);
-}
-
-function toolResult(payload: unknown, isError: boolean) {
-	return {
-		content: [{ type: "text", text: JSON.stringify(payload) }],
-		isError,
-	};
+	return toolResult(buildCheckResponse(parseCheckQuery(params)));
 }

@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
 
-# AI crawlers welcome; API docs at /llms.txt
+# AI crawlers and agents welcome.
+# API docs: https://canirungta.com/llms.txt
+# All requirements as Markdown: https://canirungta.com/requirements.md
 Sitemap: https://canirungta.com/sitemap-index.xml

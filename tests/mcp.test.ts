@@ -5,6 +5,8 @@ import { handleRpc } from "@/lib/mcp/handle-rpc";
 interface Reply {
 	result: {
 		isError: boolean;
+		protocolVersion: string;
+		structuredContent: { versions: { id: string }[] };
 		capabilities: { tools: object };
 		serverInfo: { name: string };
 		tools: { name: string }[];
@@ -32,7 +34,34 @@ describe("handleRpc", () => {
 
 	it("lists the check tool", () => {
 		const tools = call("tools/list").result.tools;
-		expect(tools.map((t) => t.name)).toEqual(["check_gta_compatibility"]);
+		expect(tools.map((t) => t.name)).toEqual([
+			"check_gta_compatibility",
+			"list_gta_requirements",
+		]);
+	});
+
+	it("echoes a supported protocol version, else offers the newest", () => {
+		const old = call("initialize", { protocolVersion: "2025-03-26" });
+		expect(old.result.protocolVersion).toBe("2025-03-26");
+		const odd = call("initialize", { protocolVersion: "1999-01-01" });
+		expect(odd.result.protocolVersion).toBe("2025-11-25");
+	});
+
+	it("lists requirements, optionally for one version", () => {
+		const all = call("tools/call", { name: "list_gta_requirements" });
+		expect(all.result.structuredContent.versions.length).toBeGreaterThan(1);
+		const one = call("tools/call", {
+			name: "list_gta_requirements",
+			arguments: { version: "gta-vi" },
+		});
+		expect(one.result.structuredContent.versions.map((v) => v.id)).toEqual([
+			"gta-vi",
+		]);
+		const bad = call("tools/call", {
+			name: "list_gta_requirements",
+			arguments: { version: "nope" },
+		});
+		expect(bad.result.isError).toBe(true);
 	});
 
 	it("runs a check and returns JSON text", () => {

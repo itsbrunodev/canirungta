@@ -5,6 +5,14 @@ Find out if your PC can run Grand Theft Auto, in seconds. Live at [canirungta.co
 - Compares your RAM, GPU memory, disk space, and OS against the minimum specs of every PC GTA release.
 - Reads specs from your browser, or from an optional one-line script for more accurate results.
 
+## For AI agents
+
+- `/llms.txt`: how to use everything below
+- `/api/check?cpu=..&gpu=..&ram=..&vram=..&disk=..`: JSON verdicts (`/openapi.json` describes it)
+- `/mcp`: MCP server with `check_gta_compatibility` and `list_gta_requirements`
+- `/requirements.md`, `/api/versions.json`: the requirements data
+- `/?cpu=..&gpu=..&ram=..`: the page pre-filled with specs
+
 ## Run locally
 
 ```sh

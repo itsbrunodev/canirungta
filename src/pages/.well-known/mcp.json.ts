@@ -1,3 +1,5 @@
+import { SITE_URL } from "@/constants/site";
+
 // Discovery stub so agents can find the MCP endpoint from the domain alone.
 export function GET() {
 	return new Response(
@@ -5,9 +7,11 @@ export function GET() {
 			name: "canirungta",
 			description: "Check PC specs against every PC GTA release.",
 			transport: "streamable-http",
-			url: "https://canirungta.com/mcp",
-			openapi: "https://canirungta.com/openapi.json",
-			llms: "https://canirungta.com/llms.txt",
+			url: `${SITE_URL}/mcp`,
+			tools: ["check_gta_compatibility", "list_gta_requirements"],
+			openapi: `${SITE_URL}/openapi.json`,
+			llms: `${SITE_URL}/llms.txt`,
+			requirements: `${SITE_URL}/requirements.md`,
 		}),
 		{ headers: { "Content-Type": "application/json" } },
 	);

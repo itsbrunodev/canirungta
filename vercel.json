@@ -25,6 +25,10 @@
 			]
 		},
 		{
+			"source": "/(llms\\.txt|openapi\\.json|requirements\\.md|api/versions\\.json|\\.well-known/mcp\\.json)",
+			"headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+		},
+		{
 			"source": "/_astro/(.*)",
 			"headers": [
 				{

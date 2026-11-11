@@ -1,7 +1,9 @@
 import type { APIContext } from "astro";
 
+import { SPEC_PARAM_NAMES } from "@/constants/api/check-params";
+
 import { buildCheckResponse } from "@/lib/api/build-check-response";
-import { parseCheckQuery } from "@/lib/api/parse-check-query";
+import { hasSpecParams, parseCheckQuery } from "@/lib/api/parse-check-query";
 
 export const prerender = false;
 
@@ -9,22 +11,25 @@ export const prerender = false;
 const HEADERS = {
 	"Content-Type": "application/json",
 	"Access-Control-Allow-Origin": "*",
+	"Access-Control-Allow-Methods": "GET, OPTIONS",
 	"Cache-Control": "public, max-age=3600",
 };
 
+export function OPTIONS() {
+	return new Response(null, { status: 204, headers: HEADERS });
+}
+
 export function GET({ url }: APIContext) {
-	const parsed = parseCheckQuery(url.searchParams);
-	const hasSpecs = [...url.searchParams.keys()].some((key) => key !== "os");
-	if (!hasSpecs) {
+	if (!hasSpecParams(url.searchParams)) {
 		return new Response(
 			JSON.stringify({
-				error:
-					"Pass at least one of: cpu, gpu, ram, vram, disk. See /llms.txt.",
+				error: `Pass at least one of: ${SPEC_PARAM_NAMES.join(", ")}.`,
+				example: "/api/check?cpu=Ryzen%205%205600&gpu=RTX%203060&ram=16",
+				docs: "/llms.txt",
 			}),
 			{ status: 400, headers: HEADERS },
 		);
 	}
-	return new Response(JSON.stringify(buildCheckResponse(parsed), null, 2), {
-		headers: HEADERS,
-	});
+	const body = buildCheckResponse(parseCheckQuery(url.searchParams));
+	return new Response(JSON.stringify(body, null, 2), { headers: HEADERS });
 }

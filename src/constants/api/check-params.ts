@@ -1,4 +1,6 @@
-// Single source for the check inputs, shared by the OpenAPI spec and the MCP tool schema.
+import { GTA_VERSIONS } from "@/constants/gta/versions";
+
+// Single source for the check inputs, shared by the OpenAPI spec, the MCP tool and the in-page WebMCP tool.
 export interface CheckParam {
 	name: string;
 	type: "string" | "number";
@@ -7,17 +9,31 @@ export interface CheckParam {
 	enum?: string[];
 }
 
+export const VERSION_IDS = GTA_VERSIONS.map((version) => version.id);
+
+// The hardware inputs; a check needs at least one of them.
+export const SPEC_PARAM_NAMES = ["cpu", "gpu", "ram", "vram", "disk"];
+
+export const VERSION_PARAM: CheckParam = {
+	name: "version",
+	type: "string",
+	description: `Limit results to these version ids, comma-separated; default all. Ids: ${VERSION_IDS.join(", ")}`,
+	example: "gta-v-enhanced",
+};
+
 export const CHECK_PARAMS: CheckParam[] = [
 	{
 		name: "cpu",
 		type: "string",
-		description: "CPU model, e.g. 'Ryzen 5 5600'",
+		description:
+			"CPU marketing name, e.g. 'Ryzen 5 5600' or 'Core i7-9700K'. Needed for a CPU verdict.",
 		example: "Ryzen 5 5600",
 	},
 	{
 		name: "gpu",
 		type: "string",
-		description: "GPU model, e.g. 'RTX 3060'",
+		description:
+			"GPU marketing name, e.g. 'RTX 3060' or 'Radeon RX 6600'. Needed for a GPU verdict.",
 		example: "RTX 3060",
 	},
 	{
@@ -29,7 +45,7 @@ export const CHECK_PARAMS: CheckParam[] = [
 	{
 		name: "vram",
 		type: "number",
-		description: "GPU memory in GB",
+		description: "GPU memory in GB; only used together with gpu",
 		example: 12,
 	},
 	{
@@ -48,9 +64,11 @@ export const CHECK_PARAMS: CheckParam[] = [
 	{
 		name: "windows",
 		type: "number",
-		description: "Windows major version; 10 also covers Windows 11",
+		description:
+			"Windows major version; pass 10 for Windows 10 and 11. Omitted = OS check unknown on newer games.",
 		example: 10,
 	},
+	VERSION_PARAM,
 ];
 
 export const CHECK_SUMMARY =

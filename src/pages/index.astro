@@ -53,6 +53,15 @@ const structuredData = buildStructuredData({
 			</p>
 		</header>
 		<SystemCheck client:load covers={covers} />
+		<!-- Results need JavaScript; no-JS readers and crawlers get the data and the API instead. -->
+		<noscript>
+			<p class="text-muted-foreground text-center text-sm">
+				This checker needs JavaScript. The full requirements are at
+				<a class="underline" href="/requirements.md">/requirements.md</a>, and
+				specs can be checked through the API described in
+				<a class="underline" href="/llms.txt">/llms.txt</a>.
+			</p>
+		</noscript>
 		<SiteFooter />
 	</main>
 	<script type="application/ld+json" set:html={JSON.stringify(structuredData)} />

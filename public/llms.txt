@@ -1,6 +1,13 @@
 # Can I Run GTA?
 
-> Checks PC specs against the minimum requirements of every PC Grand Theft Auto release (GTA III to GTA V Enhanced, plus projected GTA VI). Free JSON API, no key needed.
+> Checks PC specs against the minimum and recommended requirements of every PC Grand Theft Auto release (GTA III to GTA V Enhanced, plus projected GTA VI). Free JSON API, no key, CORS open.
+
+Guidance for AI agents:
+
+- Pass every spec the user gave. Ask for missing ones instead of guessing; omitted specs give `unknown`, never a pass.
+- Use exact marketing names for hardware (`Core i5-12400F`, `GeForce RTX 3060`, `Radeon RX 6600 XT`). If a name is not recognised, `suggestions` lists the closest known names; confirm with the user which one they have, then retry.
+- GTA VI has no official PC requirements. Its figures are third-party projections (`confidence: approximate`); say so when reporting.
+- Give the user `resultsUrl` from the response so they can see the same check on the site.
 
 ## Check a PC
 
@@ -11,27 +18,48 @@ Query parameters (at least one of cpu, gpu, ram, vram, disk is required):
 - cpu: CPU model, e.g. `Ryzen 5 5600`
 - gpu: GPU model, e.g. `RTX 3060`
 - ram: system RAM in GB, e.g. `16`
-- vram: GPU memory in GB, e.g. `12`
+- vram: GPU memory in GB, e.g. `12` (only used together with gpu)
 - disk: free disk space in GB, e.g. `200`
 - os: `windows` (default), `linux`, `macos` or `mobile`
-- windows: Windows major version, `10` (Windows 11 counts as 10) or older
+- windows: Windows major version; pass `10` for Windows 10 and 11. If omitted, the OS check is `unknown` for games that need Windows 10
+- version: comma-separated version ids to limit the results (default: all)
+
+Version ids: `gta-vi`, `gta-v-enhanced`, `gta-v-2015`, `gta-iv-complete`, `gta-iv-original`, `gta-sa-definitive`, `gta-sa-original`, `gta-vc-definitive`, `gta-vc-original`, `gta-iii-definitive`, `gta-iii-original`
 
 Example:
 
-https://canirungta.com/api/check?cpu=Ryzen%205%205600&gpu=RTX%203060&ram=16&vram=12&disk=200&os=windows&windows=10
+https://canirungta.com/api/check?cpu=Ryzen%205%205600&gpu=RTX%203060&ram=16&vram=12&disk=200&os=windows&windows=10&version=gta-v-enhanced,gta-vi
 
-Response: JSON with `input`, `errors`, `warnings` and `results`, one per GTA version. Each result has a `verdict` and per-component `checks` (status pass/fail/unknown).
+Response (JSON):
 
-Verdicts: `runs-well` (meets recommended), `runs` (meets minimum only), `cannot` (fails a minimum), `unknown` (missing or unrecognised specs; supply more), `needs-windows` (hardware fine, non-Windows OS needs Proton/Wine), `unsupported` (mobile).
+- `input`: the specs as parsed
+- `errors`: invalid inputs that were skipped (the check still runs on the rest)
+- `warnings`: CPU/GPU names that were not recognised
+- `suggestions`: `{ cpu: [], gpu: [] }`, up to 3 closest recognised names for each unrecognised one (empty when nothing is close)
+- `resultsUrl`: the website pre-filled with the same specs
+- `results`: one entry per version with `id`, `title`, `edition`, `verdict`, `summary` (one sentence), `confidence`, `sourceUrl` and `checks`
+- `checks`: per component (CPU, GPU, RAM, VRAM, Disk, OS) with `status` (`pass`/`fail`/`unknown`), `actual`, `required` (the minimum) and `note`
 
-Omitted specs give `unknown` checks, never a pass. Unrecognised CPU/GPU names appear in `warnings`; retry with the exact marketing name.
+Verdicts: `runs-well` (meets recommended), `runs` (meets minimum only), `cannot` (fails a minimum), `unknown` (missing or unrecognised specs; supply more), `needs-windows` (nothing failed, but a non-Windows OS needs Proton/Wine), `unsupported` (mobile).
+
+A request with no specs returns HTTP 400 with an `error` message.
 
 ## Requirements data
 
-GET https://canirungta.com/api/versions.json: the published minimum/recommended specs per version, with source URLs and a `confidence` field (`official`, `approximate`, `unannounced`).
+- Markdown, all versions on one page: https://canirungta.com/requirements.md
+- JSON: https://canirungta.com/api/versions.json, with the minimum/recommended specs per version, source URLs and a `confidence` field (`official`, `approximate`, `unannounced`). `null` means no published figure.
+
+## Link a user to their results
+
+https://canirungta.com/?cpu=Ryzen%205%205600&gpu=RTX%203060&ram=16&vram=12&disk=200
+
+The page accepts the same cpu, gpu, ram, vram and disk parameters and shows the verdicts for them. The OS is read from the visitor's browser.
 
 ## Other interfaces
 
 - OpenAPI 3.1 spec: https://canirungta.com/openapi.json (import as a GPT Action or any tool-calling client)
-- MCP server (streamable HTTP, stateless): https://canirungta.com/mcp, with one tool `check_gta_compatibility` taking the same parameters as /api/check (cpu, gpu, ram, vram, disk, os, windows)
+- MCP server (streamable HTTP, stateless, no auth): https://canirungta.com/mcp
+  - `check_gta_compatibility`: same parameters as /api/check
+  - `list_gta_requirements`: the requirements data, optional `version` filter
 - Discovery: https://canirungta.com/.well-known/mcp.json
+- Browser agents: the page registers `check_gta_compatibility` through WebMCP (`navigator.modelContext`) where the browser supports it; otherwise open "Get exact results" and fill the "Enter your PC specs" form.
