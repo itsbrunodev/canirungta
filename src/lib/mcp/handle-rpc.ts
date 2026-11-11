@@ -3,6 +3,7 @@ import {
 	REQUIREMENTS_TOOL,
 	runRequirementsTool,
 } from "@/lib/mcp/requirements-tool";
+import { rpcError as error } from "@/lib/mcp/rpc-error";
 
 // Newest first. Tools-only and stateless, so every revision behaves the same here.
 const PROTOCOL_VERSIONS = [
@@ -86,8 +87,4 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function ok(id: string | number, result: object) {
 	return { jsonrpc: "2.0", id, result };
-}
-
-function error(id: string | number | null, code: number, message: string) {
-	return { jsonrpc: "2.0", id, error: { code, message } };
 }
