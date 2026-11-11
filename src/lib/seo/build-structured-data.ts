@@ -1,4 +1,5 @@
 import { GTA_VERSIONS } from "@/constants/gta/versions";
+import { SITE_KEYWORDS } from "@/constants/seo/keywords";
 
 interface StructuredDataInput {
 	siteUrl: string;
@@ -35,6 +36,7 @@ export function buildStructuredData({
 				name: SITE_NAME,
 				description,
 				inLanguage: "en",
+				keywords: SITE_KEYWORDS.join(", "),
 				isPartOf: { "@id": websiteId },
 				applicationCategory: "UtilitiesApplication",
 				// Runs in the browser, so no OS requirement beyond a modern browser.
