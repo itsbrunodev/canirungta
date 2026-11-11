@@ -120,8 +120,8 @@ describe("checkGtaVersion", () => {
 				{ name: "dGPU", vramBytes: 6 * GIB },
 			],
 		});
-		expect(run(specs).checks.find((c) => c.label === "VRAM")?.note).toBe(
-			"dGPU",
+		expect(run(specs).checks.find((c) => c.label === "VRAM")?.actual).toBe(
+			"6.0 GB",
 		);
 	});
 
