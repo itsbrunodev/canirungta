@@ -2,6 +2,7 @@
 import { SystemCheck } from "@/components/gta/system-check";
 import SiteFooter from "@/components/layout/site-footer.astro";
 import ThemeToggle from "@/components/layout/theme-toggle.astro";
+import RequirementsOverview from "@/components/seo/requirements-overview.astro";
 
 import { getGtaCovers } from "@/lib/gta/get-covers";
 import type { CoverImage } from "@/lib/gta/types";
@@ -10,8 +11,9 @@ import { buildStructuredData } from "@/lib/seo/build-structured-data";
 import BaseLayout from "@/layouts/base-layout.astro";
 
 const pageTitle = "Can I run GTA? Check every PC version of Grand Theft Auto";
+// Kept under ~160 characters so search engines do not truncate it.
 const pageDescription =
-	"Check whether your PC can run every PC version of Grand Theft Auto, from GTA III to GTA V Enhanced, against its published minimum requirements. Free, runs in your browser.";
+	"Check if your PC can run every PC version of GTA, from GTA III to GTA V Enhanced, against published minimum requirements. Free, in your browser.";
 
 const covers = await getGtaCovers();
 
@@ -53,6 +55,7 @@ const structuredData = buildStructuredData({
 			</p>
 		</header>
 		<SystemCheck client:load covers={covers} />
+		<RequirementsOverview />
 		<!-- Results need JavaScript; no-JS readers and crawlers get the data and the API instead. -->
 		<noscript>
 			<p class="text-muted-foreground text-center text-sm">

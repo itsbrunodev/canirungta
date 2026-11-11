@@ -1,0 +1,56 @@
+---
+// Server-rendered copy of the minimum specs, so crawlers and no-JS readers see the data without running the checker.
+import { GTA_VERSIONS } from "@/constants/gta/versions";
+
+import { formatGb } from "@/lib/gta/format-gb";
+
+const NOT_PUBLISHED = "Not published";
+---
+
+<section aria-labelledby="requirements-overview" class="mx-auto w-full max-w-4xl">
+	<h2 id="requirements-overview" class="text-foreground text-xl font-semibold tracking-tight sm:text-3xl">
+		Minimum PC requirements for every GTA version
+	</h2>
+	<p class="text-muted-foreground mt-2 text-sm">
+		Published minimum figures. "Not published" means no figure exists yet, not zero.
+	</p>
+	<div class="mt-6 overflow-x-auto">
+		<table class="w-full min-w-[32rem] border-collapse text-left text-sm">
+			<caption class="sr-only">Minimum RAM, video memory, disk space and Windows version for each GTA PC release</caption>
+			<thead class="text-muted-foreground border-border border-b">
+				<tr>
+					<th scope="col" class="py-2 pr-4 font-medium">Version</th>
+					<th scope="col" class="py-2 pr-4 font-medium">RAM</th>
+					<th scope="col" class="py-2 pr-4 font-medium">VRAM</th>
+					<th scope="col" class="py-2 pr-4 font-medium">Disk</th>
+					<th scope="col" class="py-2 font-medium">OS</th>
+				</tr>
+			</thead>
+			<tbody class="text-foreground divide-border divide-y">
+				{
+					GTA_VERSIONS.map((version) => {
+						const min = version.minimum;
+						const windows =
+							version.os.minWindowsMajor === null
+								? "Windows"
+								: `Windows ${version.os.minWindowsMajor}+`;
+						return (
+							<tr>
+								<th scope="row" class="py-2 pr-4 font-medium">
+									{version.title} <span class="text-muted-foreground font-normal">{version.edition}</span>
+								</th>
+								<td class="py-2 pr-4 whitespace-nowrap">{formatGb(min.ramGb) ?? NOT_PUBLISHED}</td>
+								<td class="py-2 pr-4 whitespace-nowrap">{formatGb(min.vramGb) ?? NOT_PUBLISHED}</td>
+								<td class="py-2 pr-4 whitespace-nowrap">{formatGb(min.diskGb) ?? NOT_PUBLISHED}</td>
+								<td class="py-2 whitespace-nowrap">{windows}{version.os.requires64Bit ? ", 64-bit" : ""}</td>
+							</tr>
+						);
+					})
+				}
+			</tbody>
+		</table>
+	</div>
+	<p class="text-muted-foreground mt-4 text-sm">
+		Full CPU and GPU requirements are in <a class="underline" href="/requirements.md">Markdown</a> and <a class="underline" href="/api/versions.json">JSON</a>.
+	</p>
+</section>

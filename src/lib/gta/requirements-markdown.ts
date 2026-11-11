@@ -1,6 +1,7 @@
 import { GTA_VERSIONS } from "@/constants/gta/versions";
 import { SITE_URL } from "@/constants/site";
 
+import { formatGb } from "@/lib/gta/format-gb";
 import type { GtaRequirement, GtaVersion } from "@/lib/gta/types";
 
 const CONFIDENCE_NOTES: Record<GtaVersion["confidence"], string> = {
@@ -40,9 +41,9 @@ function versionSection(version: GtaVersion): string[] {
 		"| --- | --- | --- |",
 		row("CPU", minimum, recommended, (req) => req.cpu?.join(" or ") ?? null),
 		row("GPU", minimum, recommended, (req) => req.gpu?.join(" or ") ?? null),
-		row("RAM", minimum, recommended, (req) => gb(req.ramGb)),
-		row("VRAM", minimum, recommended, (req) => gb(req.vramGb)),
-		row("Disk", minimum, recommended, (req) => gb(req.diskGb)),
+		row("RAM", minimum, recommended, (req) => formatGb(req.ramGb)),
+		row("VRAM", minimum, recommended, (req) => formatGb(req.vramGb)),
+		row("Disk", minimum, recommended, (req) => formatGb(req.diskGb)),
 		"",
 	];
 }
@@ -57,10 +58,4 @@ function row(
 	// A missing recommended figure falls back to the minimum, as the checker does.
 	const rec = (recommended && read(recommended)) ?? "same as minimum";
 	return `| ${label} | ${min} | ${rec} |`;
-}
-
-// Old releases need well under 1 GB, which reads better in MB.
-function gb(value: number | null): string | null {
-	if (value === null) return null;
-	return value < 1 ? `${Math.round(value * 1024)} MB` : `${value} GB`;
 }
