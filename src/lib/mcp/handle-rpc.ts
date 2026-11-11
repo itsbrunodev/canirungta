@@ -43,7 +43,7 @@ export function handleRpc(body: unknown): object | null {
 				capabilities: { tools: {} },
 				serverInfo: {
 					name: "canirungta",
-					title: "Can I Run GTA?",
+					title: "Can I run GTA?",
 					version: "1.1.0",
 				},
 				instructions:

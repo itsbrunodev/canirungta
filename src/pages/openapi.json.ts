@@ -28,7 +28,7 @@ const REQUIREMENT_SCHEMA = {
 const spec = {
 	openapi: "3.1.0",
 	info: {
-		title: "Can I Run GTA? API",
+		title: "Can I run GTA? API",
 		version: "1.1.0",
 		description: CHECK_SUMMARY,
 	},

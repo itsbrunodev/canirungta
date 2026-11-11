@@ -1,4 +1,4 @@
-# Can I Run GTA?
+# Can I run GTA?
 
 > Checks PC specs against the minimum and recommended requirements of every PC Grand Theft Auto release (GTA III to GTA V Enhanced, plus projected GTA VI). Free JSON API, no key, CORS open.
 

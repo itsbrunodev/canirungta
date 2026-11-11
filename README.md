@@ -1,4 +1,4 @@
-# Can I Run GTA?
+# Can I run GTA?
 
 Find out if your PC can run Grand Theft Auto, in seconds. Live at [canirungta.com](https://canirungta.com).
 
