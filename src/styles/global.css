@@ -27,7 +27,7 @@
 	--grid-alpha: 2.2%;
 	--glass-bg: rgb(255 255 255 / 0.04);
 	--glass-border: rgb(255 255 255 / 0.09);
-	--blob-alpha: 3%;
+	--blob-alpha: 1%;
 	/* Cards rely on the glass border in dark mode; shadows only help on light. */
 	--shadow-card: none;
 }
