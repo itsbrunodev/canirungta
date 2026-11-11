@@ -7,37 +7,23 @@ export const GTA_VERSIONS: GtaVersion[] = [
 		title: "Grand Theft Auto VI",
 		edition: "PC (not announced)",
 		confidence: "approximate",
-		sourceUrl: "https://gta6-specs.com/pc/system-requirements/",
-		// Console-only so far. Rockstar has published no PC specs; these are third-party projections (1080p/low tier); sources split on VRAM (6 vs 8 GB), so the lower bound is used.
+		sourceUrl:
+			"https://www.reddit.com/r/GTA/comments/1w2h0xj/gta_vi_pc_requirements_based_on_a_few_educated/",
+		// Console-only so far. Rockstar has published no PC specs; these are community projections from the linked Reddit post. One CPU and one GPU per brand.
 		minimum: {
 			ramGb: 16,
-			vramGb: 6,
+			vramGb: 8,
 			diskGb: 150,
-			cpu: ["Ryzen 5 3600", "Ryzen 5 5600", "Core i5-10400F", "Core i5-12400F"],
-			gpu: [
-				"GeForce RTX 3060",
-				"GeForce RTX 4060",
-				"Radeon RX 5700 XT",
-				"Radeon RX 6700 XT",
-			],
+			cpu: ["Ryzen 5 3600", "Core i5-10400"],
+			gpu: ["GeForce RTX 2060 SUPER", "Radeon RX 5700 XT"],
 		},
-		// 1440p / 60 FPS / High tier from the same projections.
+		// 1440p / 40+ FPS / medium-high tier from the same Reddit post. One CPU and one GPU per brand.
 		recommended: {
-			ramGb: 32,
+			ramGb: 16,
 			vramGb: 12,
 			diskGb: 150,
-			cpu: [
-				"Ryzen 7 5800X",
-				"Ryzen 5 7500X3D",
-				"Core i7-12700K",
-				"Core i5-14600KF",
-			],
-			gpu: [
-				"GeForce RTX 4070",
-				"GeForce RTX 5070",
-				"Radeon RX 7800 XT",
-				"Radeon RX 9070 XT",
-			],
+			cpu: ["Ryzen 7 5800X", "Core i5-12400F"],
+			gpu: ["GeForce RTX 4070", "Radeon RX 7700 XT"],
 		},
 		os: { minWindowsMajor: 10, requires64Bit: true },
 	},
