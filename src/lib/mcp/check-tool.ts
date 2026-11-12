@@ -1,6 +1,7 @@
 import {
 	CHECK_PARAMS,
 	CHECK_SUMMARY,
+	PERFORMANCE_SUMMARY,
 	SPEC_PARAM_NAMES,
 } from "@/constants/api/check-params";
 
@@ -11,7 +12,7 @@ import { toolResult, toSearchParams } from "@/lib/mcp/tool-result";
 export const CHECK_TOOL = {
 	name: "check_gta_compatibility",
 	title: "Check GTA compatibility",
-	description: `${CHECK_SUMMARY} Provide at least one of ${SPEC_PARAM_NAMES.join(", ")}; ask the user for missing ones rather than guessing. Each result has a verdict, a one-line summary and per-component checks; resultsUrl opens the same check for the user.`,
+	description: `${CHECK_SUMMARY} Provide at least one of ${SPEC_PARAM_NAMES.join(", ")}; ask the user for missing ones rather than guessing. Each result has a verdict, a one-line summary and per-component checks. ${PERFORMANCE_SUMMARY} resultsUrl opens the same check for the user.`,
 	inputSchema: {
 		type: "object",
 		properties: Object.fromEntries(

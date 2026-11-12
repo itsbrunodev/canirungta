@@ -1,4 +1,12 @@
+import { MEMORY_TOLERANCE } from "@/constants/gta/tolerances";
+
 import { checkCpu, checkGpuModel } from "@/lib/gta/check-hardware";
+import { checkPerformance } from "@/lib/gta/check-performance";
+import {
+	describeDisk,
+	describeRam,
+	SOFTWARE_RENDERER_NOTE,
+} from "@/lib/gta/describe-hardware";
 import { formatGb, formatGbValue } from "@/lib/gta/format-gb";
 import type {
 	CheckRow,
@@ -7,17 +15,14 @@ import type {
 	Verdict,
 	VersionReport,
 } from "@/lib/gta/types";
+import { bestGpu } from "@/lib/gta/usable-gpu";
+import type { VramRange } from "@/lib/hardware/lookup-vram";
+import { diskId } from "@/lib/machine/disk-id";
 import type { MachineSpecs } from "@/lib/machine/types";
 
 const GIB = 1024 ** 3;
 const DECIMAL_GB = 1e9;
-// Reported RAM/VRAM sit below nominal (reserved memory, GiB vs GB), so allow 10% slack before failing.
-const TOLERANCE = 0.9;
 const DEVICE_MEMORY_CAP_GB = 8;
-// Apple GPUs can address roughly two thirds of unified memory (Metal's recommended working set).
-const UNIFIED_GPU_SHARE = 0.66;
-// Windows and Linux iGPUs cap shared memory at about half of RAM.
-const INTEGRATED_GPU_SHARE = 0.5;
 
 export function checkGtaVersion(
 	version: GtaVersion,
@@ -29,6 +34,7 @@ export function checkGtaVersion(
 		version,
 		verdict: verdictFrom(checks, recChecks, specs),
 		checks,
+		performance: checkPerformance(version, specs),
 	};
 }
 
@@ -74,10 +80,10 @@ function checkRam(req: GtaRequirement, specs: MachineSpecs): CheckRow {
 	}
 	return {
 		label: "RAM",
-		status: actualGb >= min * TOLERANCE ? "pass" : "fail",
+		status: actualGb >= min * MEMORY_TOLERANCE ? "pass" : "fail",
 		actual: formatGbValue(actualGb),
 		required: formatGb(min),
-		note: null,
+		note: describeRam(specs),
 	};
 }
 
@@ -86,17 +92,49 @@ function checkVram(req: GtaRequirement, specs: MachineSpecs): CheckRow {
 	if (min === null) return unknownRow("VRAM", "No published minimum");
 
 	const best = bestGpu(specs);
-	if (!best || best.bytes === null)
-		return unknownRow("VRAM", "Not reported on this platform", min);
+	if (!best || best.bytes === null) {
+		return unknownRow(
+			"VRAM",
+			specs.details.softwareRenderer
+				? SOFTWARE_RENDERER_NOTE
+				: "Not reported on this platform",
+			min,
+		);
+	}
 
 	const actualGb = best.bytes / GIB;
+	if (best.estimate) return checkEstimatedVram(min, actualGb, best.estimate);
 	return {
 		label: "VRAM",
-		status: actualGb >= min * TOLERANCE ? "pass" : "fail",
+		status: actualGb >= min * MEMORY_TOLERANCE ? "pass" : "fail",
 		actual: formatGbValue(actualGb),
 		required: formatGb(min),
 		note: best.shared ? "Shares system RAM" : null,
 	};
+}
+
+// VRAM looked up from the GPU model. A range that straddles the minimum cannot be decided.
+function checkEstimatedVram(
+	min: number,
+	lowGb: number,
+	range: VramRange,
+): CheckRow {
+	const varies = range.maxGb > range.minGb;
+	const base = {
+		label: "VRAM",
+		required: formatGb(min),
+		note: varies
+			? `Varies by model (${formatGb(range.minGb)} to ${formatGb(range.maxGb)}), estimated from GPU name`
+			: "Estimated from GPU name",
+	};
+	const actual = varies
+		? `${formatGbValue(range.minGb)} to ${formatGb(range.maxGb)}`
+		: formatGbValue(lowGb);
+	if (range.minGb >= min * MEMORY_TOLERANCE)
+		return { ...base, status: "pass", actual };
+	if (range.maxGb < min * MEMORY_TOLERANCE)
+		return { ...base, status: "fail", actual };
+	return { ...base, status: "unknown", actual };
 }
 
 function checkDisk(req: GtaRequirement, specs: MachineSpecs): CheckRow {
@@ -105,17 +143,26 @@ function checkDisk(req: GtaRequirement, specs: MachineSpecs): CheckRow {
 	if (specs.disks.length === 0)
 		return unknownRow("Disk", "Browser cannot read free disk space", min);
 
-	// The game can be installed on any drive, so the roomiest one decides.
-	const freeBytes = Math.max(...specs.disks.map((disk) => disk.freeBytes));
-	const freeGb = freeBytes / DECIMAL_GB;
+	// The game can be installed on any drive: the visitor's pick decides, else the roomiest.
+	const picked = specs.disks.find((d) => diskId(d) === specs.installDiskId);
+	const roomiest =
+		picked ??
+		specs.disks.reduce((best, disk) =>
+			disk.freeBytes > best.freeBytes ? disk : best,
+		);
+	const freeGb = roomiest.freeBytes / DECIMAL_GB;
 	return {
 		label: "Disk",
 		// No tolerance: unlike RAM, free space is not under-reported.
 		status: freeGb >= min ? "pass" : "fail",
 		actual: `${formatGbValue(freeGb)} free`,
 		required: formatGb(min),
-		note:
-			specs.disks.length > 1 ? `Best of ${specs.disks.length} drives` : null,
+		note: describeDisk(
+			roomiest,
+			specs.disks,
+			min * DECIMAL_GB,
+			picked !== undefined,
+		),
 	};
 }
 
@@ -178,37 +225,6 @@ function translationNote(specs: MachineSpecs): string {
 		return "Vulkan is not working, which Proton needs";
 	}
 	return "Linux/macOS would need Proton or Wine (not checked)";
-}
-
-interface UsableGpu {
-	name: string | null;
-	// Memory the GPU can use; null when unknown.
-	bytes: number | null;
-	shared: boolean;
-}
-
-// Best GPU, since iGPUs and dGPUs can both be present. Shared-memory GPUs count what they can borrow from RAM.
-function bestGpu(specs: MachineSpecs): UsableGpu | null {
-	const usable = specs.gpus.map((gpu): UsableGpu => {
-		const shareOfRam = specs.unifiedMemory
-			? UNIFIED_GPU_SHARE
-			: gpu.integrated
-				? INTEGRATED_GPU_SHARE
-				: null;
-		if (shareOfRam === null || specs.ramBytes === null) {
-			return { name: gpu.name, bytes: gpu.vramBytes, shared: false };
-		}
-		return {
-			name: gpu.name,
-			bytes: Math.max(gpu.vramBytes ?? 0, specs.ramBytes * shareOfRam),
-			shared: true,
-		};
-	});
-	const known = usable.filter((gpu) => gpu.bytes !== null);
-	if (known.length === 0) return usable[0] ?? null;
-	return known.reduce((best, gpu) =>
-		(gpu.bytes ?? 0) > (best.bytes ?? 0) ? gpu : best,
-	);
 }
 
 function verdictFrom(

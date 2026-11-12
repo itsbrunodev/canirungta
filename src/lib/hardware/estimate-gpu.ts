@@ -19,6 +19,9 @@ export interface GpuEstimateRecord {
 	boost_mhz: number | null;
 	bus_bits: number | null;
 	memory_clock_mhz: number | null;
+	// Smallest and largest board seen for this chipset; null when the dataset has none.
+	vram_min_gb: number | null;
+	vram_max_gb: number | null;
 }
 
 export interface GpuEstimate {
@@ -44,7 +47,7 @@ export function estimateGpuScore(name: string): GpuEstimate | null {
 		: estimate;
 }
 
-function findRecord(normalized: string): GpuEstimateRecord | null {
+export function findRecord(normalized: string): GpuEstimateRecord | null {
 	let best: (typeof RECORDS)[number] | null = null;
 	for (const entry of RECORDS) {
 		if (

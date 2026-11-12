@@ -5,7 +5,8 @@ export function GET() {
 	return new Response(
 		JSON.stringify({
 			name: "canirungta",
-			description: "Check PC specs against every PC GTA release.",
+			description:
+				"Check PC specs against every PC GTA release, with estimated FPS per resolution and preset.",
 			transport: "streamable-http",
 			url: `${SITE_URL}/mcp`,
 			tools: ["check_gta_compatibility", "list_gta_requirements"],

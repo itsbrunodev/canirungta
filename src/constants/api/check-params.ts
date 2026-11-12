@@ -71,5 +71,9 @@ export const CHECK_PARAMS: CheckParam[] = [
 	VERSION_PARAM,
 ];
 
+// Appended to tool/endpoint descriptions so every interface tells agents how to present FPS figures.
+export const PERFORMANCE_SUMMARY =
+	'Each result also has a "performance" estimate: average FPS per resolution (720p/1080p/1440p/4K) and settings preset, with a range, the bottleneck and the best smooth setting. It is modelled from benchmarks, so present it as an estimate (a projection for the unreleased GTA VI), never a measurement.';
+
 export const CHECK_SUMMARY =
 	"Check a PC's specs against the requirements of every PC Grand Theft Auto release. Omitted specs come back as unknown, never as a pass.";

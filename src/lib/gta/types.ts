@@ -1,3 +1,5 @@
+import type { PerformanceReport } from "@/lib/gta/performance-types";
+
 export type Verdict =
 	| "runs-well"
 	| "runs"
@@ -55,6 +57,8 @@ export interface VersionReport {
 	verdict: Verdict;
 	// Rows against the minimum spec.
 	checks: CheckRow[];
+	// Estimated frame rates per resolution and settings preset.
+	performance: PerformanceReport;
 }
 
 // Plain serializable image data, safe to pass from an .astro page into a client island.

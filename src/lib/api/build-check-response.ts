@@ -38,6 +38,8 @@ export function buildCheckResponse({ query, specs, errors }: ParsedCheckQuery) {
 			confidence: version.confidence,
 			sourceUrl: version.sourceUrl,
 			checks: report.checks,
+			// Estimated FPS per resolution and preset.
+			performance: report.performance,
 		};
 	});
 

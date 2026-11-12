@@ -1,6 +1,10 @@
 import { SPEC_PARAM_NAMES, VERSION_IDS } from "@/constants/api/check-params";
 
-import type { MachineSpecs, OsFamily } from "@/lib/machine/types";
+import {
+	EMPTY_DETAILS,
+	type MachineSpecs,
+	type OsFamily,
+} from "@/lib/machine/types";
 
 const GIB = 1024 ** 3;
 const DECIMAL_GB = 1e9;
@@ -71,7 +75,14 @@ export function parseCheckQuery(params: URLSearchParams): ParsedCheckQuery {
 		disks:
 			query.diskFreeGb === null
 				? []
-				: [{ freeBytes: query.diskFreeGb * DECIMAL_GB }],
+				: [
+						{
+							freeBytes: query.diskFreeGb * DECIMAL_GB,
+							kind: null,
+							label: null,
+							totalBytes: null,
+						},
+					],
 		logicalCores: null,
 		cpuModel: query.cpu,
 		gpus: query.gpu
@@ -80,10 +91,12 @@ export function parseCheckQuery(params: URLSearchParams): ParsedCheckQuery {
 						name: query.gpu,
 						vramBytes: query.vramGb === null ? null : query.vramGb * GIB,
 						integrated: false,
+						driver: null,
 					},
 				]
 			: [],
 		vulkan: null,
+		details: EMPTY_DETAILS,
 	};
 	return { query, specs, errors };
 }

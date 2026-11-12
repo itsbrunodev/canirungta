@@ -1,6 +1,7 @@
 import {
 	CHECK_PARAMS,
 	CHECK_SUMMARY,
+	PERFORMANCE_SUMMARY,
 	SPEC_PARAM_NAMES,
 } from "@/constants/api/check-params";
 
@@ -25,7 +26,7 @@ export function registerCheckTool(onSpecs: (specs: ManualSpecs) => void) {
 	try {
 		modelContext.registerTool({
 			name: "check_gta_compatibility",
-			description: `${CHECK_SUMMARY} Provide at least one of ${SPEC_PARAM_NAMES.join(", ")}. Also fills the page with these specs.`,
+			description: `${CHECK_SUMMARY} Provide at least one of ${SPEC_PARAM_NAMES.join(", ")}. ${PERFORMANCE_SUMMARY} Also fills the page with these specs.`,
 			inputSchema: {
 				type: "object",
 				properties: Object.fromEntries(

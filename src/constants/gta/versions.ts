@@ -179,12 +179,20 @@ export const GTA_VERSIONS: GtaVersion[] = [
 			"https://www.gtabase.com/articles/gta-vice-city-pc-system-requirements-original-definitive-edition",
 		minimum: {
 			ramGb: 0.125,
-			vramGb: null,
+			vramGb: 0.03125,
 			diskGb: 0.915,
+			// Listed only as "800 MHz Pentium III / Athlon" and "GeForce-class card": no model to score.
 			cpu: null,
 			gpu: null,
 		},
-		recommended: null,
+		// Pentium 4 / Athlon XP and a GeForce 3 / Radeon 8500 class card with 64 MB; no scorable models.
+		recommended: {
+			ramGb: 0.25,
+			vramGb: 0.0625,
+			diskGb: 1.55,
+			cpu: null,
+			gpu: null,
+		},
 		os: { minWindowsMajor: null, requires64Bit: false },
 	},
 	{
@@ -219,12 +227,19 @@ export const GTA_VERSIONS: GtaVersion[] = [
 			"https://www.gtabase.com/articles/gta-iii-pc-system-requirements-original-definitive-edition",
 		minimum: {
 			ramGb: 0.09375,
-			vramGb: 0.03125,
-			diskGb: null,
+			vramGb: 0.015625,
+			diskGb: 0.7,
+			// "450 MHz Pentium III / Athlon" and a "16 MB Direct3D card": no model to score.
 			cpu: null,
 			gpu: null,
 		},
-		recommended: null,
+		recommended: {
+			ramGb: 0.125,
+			vramGb: 0.03125,
+			diskGb: 0.7,
+			cpu: null,
+			gpu: null,
+		},
 		os: { minWindowsMajor: null, requires64Bit: false },
 	},
 ];

@@ -90,6 +90,7 @@ describe("hardware suggestions", () => {
 describe("manualSpecsFromQuery", () => {
 	it("reads specs from a page URL", () => {
 		expect(manualSpecsFromQuery("?cpu=Core i7-9700K&ram=16&disk=abc")).toEqual({
+			os: null,
 			cpuModel: "Core i7-9700K",
 			gpuName: null,
 			ramGb: 16,

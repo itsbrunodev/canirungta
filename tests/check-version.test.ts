@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { GTA_VERSIONS } from "@/constants/gta/versions";
 
 import { checkGtaVersion } from "@/lib/gta/check-version";
+import { diskId } from "@/lib/machine/disk-id";
 import {
 	applyManualSpecs,
 	EMPTY_MANUAL_SPECS,
@@ -53,7 +54,9 @@ describe("specsFromProbe", () => {
 			os: { family: "linux" },
 			disk: { freeBytes: 5e10 },
 		});
-		expect(specs?.disks).toEqual([{ freeBytes: 5e10 }]);
+		expect(specs?.disks).toEqual([
+			{ freeBytes: 5e10, kind: null, label: null, totalBytes: null },
+		]);
 	});
 
 	it("treats Windows 11 as major 10 and reads bitness", () => {
@@ -166,7 +169,76 @@ describe("readProbeFromHash", () => {
 		expect(specs?.osFamily).toBe("linux");
 		expect(specs?.ramBytes).toBe(32011 * 1024 * 1024);
 		expect(specs?.gpus[0]?.vramBytes).toBe(4096 * 1024 * 1024);
-		expect(specs?.disks).toEqual([{ freeBytes: 31807 * 1024 * 1024 }]);
+		expect(specs?.disks).toEqual([
+			{
+				freeBytes: 31807 * 1024 * 1024,
+				kind: null,
+				label: null,
+				totalBytes: null,
+			},
+		]);
+	});
+
+	it("decodes the v4 link with CPU, RAM, disk and GPU detail", () => {
+		const payload = [
+			4,
+			"w",
+			"Windows 11 Pro",
+			10,
+			1,
+			16384,
+			0,
+			16,
+			[["GeForce RTX 3070", 8192, 0, "551.23"]],
+			[
+				[204800, "s"],
+				[51200, "h"],
+			],
+			null,
+			"AMD Ryzen 7 5800X",
+			8,
+			4700,
+			3200,
+			"DDR4",
+		];
+		const hash = `#${btoa(JSON.stringify(payload)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`;
+		const specs = specsFromProbe(readProbeFromHash(hash));
+		expect(specs?.details.physicalCores).toBe(8);
+		expect(specs?.details.maxClockMhz).toBe(4700);
+		expect(specs?.details.ramType).toBe("DDR4");
+		expect(specs?.details.ramSpeedMhz).toBe(3200);
+		expect(specs?.gpus[0]?.driver).toBe("551.23");
+		expect(specs?.disks.map((d) => d.kind)).toEqual(["ssd", "hdd"]);
+	});
+
+	it("uses the install drive the visitor picked", () => {
+		const specs = probe({
+			schemaVersion: 3,
+			disks: [
+				{ freeBytes: 300e9, kind: "hdd", label: "D:", totalBytes: 1e12 },
+				{ freeBytes: 10e9, kind: "ssd", label: "C:", totalBytes: 5e11 },
+			],
+		});
+		const picked = { ...specs, installDiskId: diskId(specs.disks[1]) };
+		expect(run(specs).checks.find((c) => c.label === "Disk")?.status).toBe(
+			"pass",
+		);
+		const disk = run(picked).checks.find((c) => c.label === "Disk");
+		expect(disk?.status).toBe("fail");
+		expect(disk?.note).toContain("C:");
+	});
+
+	it("notes an HDD as the roomiest drive", () => {
+		const specs = probe({
+			schemaVersion: 3,
+			disks: [
+				{ freeBytes: 300e9, kind: "hdd" },
+				{ freeBytes: 200e9, kind: "ssd" },
+			],
+		});
+		const disk = run(specs).checks.find((c) => c.label === "Disk");
+		expect(disk?.status).toBe("pass");
+		expect(disk?.note).toContain("install on your SSD");
 	});
 
 	it("still decodes legacy #system= links", () => {
