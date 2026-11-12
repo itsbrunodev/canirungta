@@ -8,7 +8,7 @@ Find out if your PC can run Grand Theft Auto, in seconds. Live at [canirungta.co
 ## For AI agents
 
 - `/llms.txt`: how to use everything below
-- `/api/check?cpu=..&gpu=..&ram=..&vram=..&disk=..`: JSON verdicts (`/openapi.json` describes it)
+- `/api/check?cpu=..&gpu=..&ram=..&vram=..&disk=..`: JSON verdicts plus estimated FPS per resolution and preset (`/openapi.json` describes it)
 - `/mcp`: MCP server with `check_gta_compatibility` and `list_gta_requirements`
 - `/requirements.md`, `/api/versions.json`: the requirements data
 - `/?cpu=..&gpu=..&ram=..`: the page pre-filled with specs

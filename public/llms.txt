@@ -7,6 +7,7 @@ Guidance for AI agents:
 - Pass every spec the user gave. Ask for missing ones instead of guessing; omitted specs give `unknown`, never a pass.
 - Use exact marketing names for hardware (`Core i5-12400F`, `GeForce RTX 3060`, `Radeon RX 6600 XT`). If a name is not recognised, `suggestions` lists the closest known names; confirm with the user which one they have, then retry.
 - GTA VI has no official PC requirements. Its figures are third-party projections (`confidence: approximate`); say so when reporting.
+- Report `performance` as an estimate (with the `low`-`high` range), never a measurement; for GTA VI it is a projection.
 - Give the user `resultsUrl` from the response so they can see the same check on the site.
 
 Check endpoint: `GET https://canirungta.com/api/check`. At least one of `cpu`, `gpu`, `ram`, `vram`, `disk` is required; a request with no specs returns HTTP 400 with an `error` message.
@@ -24,7 +25,9 @@ Query parameters:
 
 Example: https://canirungta.com/api/check?cpu=Ryzen%205%205600&gpu=RTX%203060&ram=16&vram=12&disk=200&os=windows&windows=10&version=gta-v-enhanced,gta-vi
 
-Response fields: `input` (the specs as parsed), `errors` (invalid inputs that were skipped; the check still runs on the rest), `warnings` (CPU/GPU names not recognised), `suggestions` (`{ cpu: [], gpu: [] }`, up to 3 closest recognised names for each unrecognised one), `resultsUrl` (the website pre-filled with the same specs), `results` (one entry per version with `id`, `title`, `edition`, `verdict`, `summary`, `confidence`, `sourceUrl` and `checks`), and `checks` (per component CPU, GPU, RAM, VRAM, Disk, OS with `status` `pass`/`fail`/`unknown`, `actual`, `required` (the minimum) and `note`).
+Response fields: `input` (the specs as parsed), `errors` (invalid inputs that were skipped; the check still runs on the rest), `warnings` (CPU/GPU names not recognised), `suggestions` (`{ cpu: [], gpu: [] }`, up to 3 closest recognised names for each unrecognised one), `resultsUrl` (the website pre-filled with the same specs), `results` (one entry per version with `id`, `title`, `edition`, `verdict`, `summary`, `confidence`, `sourceUrl`, `checks` and `performance`), and `checks` (per component CPU, GPU, RAM, VRAM, Disk, OS with `status` `pass`/`fail`/`unknown`, `actual`, `required` (the minimum) and `note`).
+
+`performance` is an FPS estimate: `status` (`estimated`, or `unknown` when no GPU was supplied), `basis` (`benchmarks`, or `projected` for GTA VI, which has no PC release), `summary` (one sentence to relay), `best` (the highest-quality setting that stays smooth: `resolution`, `resolutionLabel`, `estimate`), `resolutions` (720p, 1080p, 1440p, 4K, each with `presets` from lowest to highest quality: `label`, `fps`, `low`, `high`, `rating` `smooth`/`playable`/`choppy`, `limitedBy` `gpu`/`cpu`/`vram`/`ram`/`engine`, `note`), `fpsCap` (frame limiter or engine ceiling), `cpuAssumed` (no CPU supplied, so figures are the GPU's ceiling), `approximate` and `notes`. Figures are average FPS at native resolution from a model fitted to benchmarks, so present them as estimates with the range, never as measurements.
 
 Verdicts: `runs-well` (meets recommended), `runs` (meets minimum only), `cannot` (fails a minimum), `unknown` (missing or unrecognised specs; supply more), `needs-windows` (nothing failed, but a non-Windows OS needs Proton/Wine), `unsupported` (mobile).
 
