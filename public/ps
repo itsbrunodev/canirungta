@@ -267,7 +267,7 @@ function ConvertTo-CanirungtaLinkJson($probe) {
 		$kind = switch ($_.kind) { 'ssd' { '"s"' } 'hdd' { '"h"' } default { 'null' } }
 		"[$(ConvertTo-CanirungtaMib $_.freeBytes),$kind,$(ConvertTo-CanirungtaMib $_.totalBytes),$(ConvertTo-CanirungtaJsonValue $_.label)]"
 	}) -join ','
-	return "[4,`\"w`\",$(ConvertTo-CanirungtaJsonValue $probe.os.name),$major,$is64,$(ConvertTo-CanirungtaMib $probe.memory.totalBytes),0,$($probe.cpu.logicalCores),[$gpus],[$disks],null,$(ConvertTo-CanirungtaJsonValue $probe.cpu.model),$(ConvertTo-CanirungtaNumOrNull $probe.cpu.physicalCores),$(ConvertTo-CanirungtaNumOrNull $probe.cpu.maxClockMhz),$(ConvertTo-CanirungtaNumOrNull $probe.memory.speedMhz),$(ConvertTo-CanirungtaJsonValue $probe.memory.type)]"
+	return "[4,`"w`",$(ConvertTo-CanirungtaJsonValue $probe.os.name),$major,$is64,$(ConvertTo-CanirungtaMib $probe.memory.totalBytes),0,$($probe.cpu.logicalCores),[$gpus],[$disks],null,$(ConvertTo-CanirungtaJsonValue $probe.cpu.model),$(ConvertTo-CanirungtaNumOrNull $probe.cpu.physicalCores),$(ConvertTo-CanirungtaNumOrNull $probe.cpu.maxClockMhz),$(ConvertTo-CanirungtaNumOrNull $probe.memory.speedMhz),$(ConvertTo-CanirungtaJsonValue $probe.memory.type)]"
 }
 
 $probe = Get-CanirungtaProbe
