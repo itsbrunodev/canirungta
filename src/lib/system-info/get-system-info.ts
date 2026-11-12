@@ -17,7 +17,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
 		os: await getOsInfo(),
 		cpu: getCpuInfo(),
 		memory: getMemoryInfo(),
-		gpu: getGpuInfo(),
+		gpu: await getGpuInfo(),
 		display: getDisplayInfo(),
 	};
 }

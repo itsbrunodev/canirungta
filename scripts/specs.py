@@ -224,8 +224,16 @@ def gpu_estimate_record(gpus: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "boost_mhz": None,
                 "bus_bits": None,
                 "memory_clock_mhz": None,
+                # Board partners ship different sizes of one chipset, so keep the range.
+                "vram_min_gb": None,
+                "vram_max_gb": None,
             },
         )
+        memory_gb = gpu.get("memory_gb")
+        if isinstance(memory_gb, (int, float)) and memory_gb > 0:
+            low, high = entry["vram_min_gb"], entry["vram_max_gb"]
+            entry["vram_min_gb"] = memory_gb if low is None else min(low, memory_gb)
+            entry["vram_max_gb"] = memory_gb if high is None else max(high, memory_gb)
         clocks = as_dict(gpu.get("core_clock_mhz"))
         values = {
             "shaders": gpu.get("core_count"),

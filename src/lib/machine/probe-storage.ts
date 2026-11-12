@@ -36,3 +36,11 @@ export function loadProbe(): StoredProbe | null {
 		return null;
 	}
 }
+
+export function clearProbe(): void {
+	try {
+		localStorage.removeItem(PROBE_STORAGE_KEY);
+	} catch {
+		// Nothing to do: the probe stays saved.
+	}
+}

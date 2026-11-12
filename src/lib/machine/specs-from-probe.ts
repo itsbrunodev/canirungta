@@ -1,16 +1,18 @@
 import { cleanGpuName } from "@/lib/hardware/clean-gpu-name";
 import type {
+	DiskKind,
 	DiskSpec,
 	GpuSpec,
+	MachineDetails,
 	MachineSpecs,
 	OsFamily,
 } from "@/lib/machine/types";
 
 // Input is untrusted (it comes from the URL), so every field is type-checked.
-// Schema 1 (no per-disk list, no unified flag) is still accepted for saved probes.
+// Schemas 1-2 (fewer fields) are still accepted for saved probes.
 export function specsFromProbe(raw: unknown): MachineSpecs | null {
 	const root = asRecord(raw);
-	if (root.schemaVersion !== 1 && root.schemaVersion !== 2) return null;
+	if (![1, 2, 3].includes(root.schemaVersion as number)) return null;
 
 	const os = asRecord(root.os);
 	const cpu = asRecord(root.cpu);
@@ -34,6 +36,20 @@ export function specsFromProbe(raw: unknown): MachineSpecs | null {
 		cpuModel: asString(cpu.model),
 		gpus: gpus.map(toGpuSpec),
 		vulkan: typeof root.vulkan === "boolean" ? root.vulkan : null,
+		details: detailsFrom(cpu, memory),
+	};
+}
+
+function detailsFrom(
+	cpu: Record<string, unknown>,
+	memory: Record<string, unknown>,
+): MachineDetails {
+	return {
+		physicalCores: asNumber(cpu.physicalCores),
+		maxClockMhz: asNumber(cpu.maxClockMhz),
+		ramSpeedMhz: asNumber(memory.speedMhz),
+		ramType: asString(memory.type),
+		softwareRenderer: false,
 	};
 }
 
@@ -45,12 +61,21 @@ function disksFrom(rawList: unknown, legacy: Record<string, unknown>) {
 
 	// Fall back to the single $HOME-volume figure.
 	const free = asNumber(legacy.freeBytes);
-	return free === null ? [] : [{ freeBytes: free }];
+	return free === null
+		? []
+		: [{ freeBytes: free, kind: null, label: null, totalBytes: null }];
 }
 
 function toDiskSpec(raw: unknown): DiskSpec | null {
-	const freeBytes = asNumber(asRecord(raw).freeBytes);
-	return freeBytes === null ? null : { freeBytes };
+	const disk = asRecord(raw);
+	const freeBytes = asNumber(disk.freeBytes);
+	if (freeBytes === null) return null;
+	return {
+		freeBytes,
+		kind: asDiskKind(disk.kind),
+		label: asString(disk.label),
+		totalBytes: asNumber(disk.totalBytes),
+	};
 }
 
 function toGpuSpec(raw: unknown): GpuSpec {
@@ -59,6 +84,7 @@ function toGpuSpec(raw: unknown): GpuSpec {
 		name: cleanGpuName(asString(gpu.name)),
 		vramBytes: asNumber(gpu.vramBytes),
 		integrated: gpu.integrated === true,
+		driver: asString(gpu.driver),
 	};
 }
 
@@ -97,4 +123,8 @@ function asOsFamily(value: unknown): OsFamily {
 		value === "bsd"
 		? value
 		: "unknown";
+}
+
+function asDiskKind(value: unknown): DiskKind | null {
+	return value === "ssd" || value === "hdd" ? value : null;
 }

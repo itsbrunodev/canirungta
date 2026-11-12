@@ -4,6 +4,7 @@ import { HardwareCombobox } from "@/components/gta/hardware-combobox";
 
 import { MANUAL_INPUT_CLASS } from "@/constants/gta/manual-input-class";
 
+import { lookupVram } from "@/lib/hardware/lookup-vram";
 import { scoreCpu } from "@/lib/hardware/score-cpu";
 import { scoreGpu } from "@/lib/hardware/score-gpu";
 import { suggestCpus, suggestGpus } from "@/lib/hardware/suggest-hardware";
@@ -11,6 +12,8 @@ import {
 	EMPTY_MANUAL_SPECS,
 	type ManualSpecs,
 } from "@/lib/machine/manual-specs";
+import { parseOsName } from "@/lib/machine/parse-os-name";
+import { suggestOs } from "@/lib/machine/suggest-os";
 
 interface ManualSpecsFormProps {
 	value: ManualSpecs;
@@ -27,6 +30,10 @@ function searchCpus(text: string) {
 
 function searchGpus(text: string) {
 	return suggestGpus(text, SUGGESTION_COUNT);
+}
+
+function isOs(text: string) {
+	return parseOsName(text) !== null;
 }
 
 function isCpu(text: string) {
@@ -46,8 +53,21 @@ export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 		setDraft(toDraft(value));
 	}, [value]);
 
+	// True while the VRAM field holds our guess, so a new GPU may replace it but typed values stay.
+	const [vramAuto, setVramAuto] = useState(false);
+
 	function update(field: keyof Draft, text: string) {
-		setDraft({ ...draft, [field]: text });
+		const next = { ...draft, [field]: text };
+		if (field === "vramGb") {
+			setVramAuto(false);
+		} else if (field === "gpuName" && (vramAuto || draft.vramGb === "")) {
+			const range = lookupVram(text);
+			// The largest size is the usual retail card; the hint shows the full range.
+			const guess = range ? String(range.maxGb) : "";
+			next.vramGb = guess;
+			setVramAuto(guess !== "");
+		}
+		setDraft(next);
 	}
 
 	function submit(event: Event) {
@@ -56,9 +76,18 @@ export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 	}
 
 	function clear() {
+		setVramAuto(false);
 		setDraft(toDraft(EMPTY_MANUAL_SPECS));
 		onSubmit(EMPTY_MANUAL_SPECS);
 	}
+
+	const range = lookupVram(draft.gpuName);
+	const vramHint =
+		range && range.minGb !== range.maxGb
+			? `${vramAuto ? "Filled from your GPU; this" : "This"} model ships with ${range.minGb}-${range.maxGb} GB`
+			: vramAuto
+				? "Filled from your GPU model"
+				: "Your GPU's own VRAM";
 
 	return (
 		<form
@@ -71,6 +100,21 @@ export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 				browser.
 			</p>
 			<div class="grid gap-3 sm:grid-cols-2">
+				<Field
+					id="manual-os"
+					label="Operating system"
+					hint="e.g. Windows 11 or Linux"
+				>
+					<HardwareCombobox
+						id="manual-os"
+						name="os"
+						listLabel="Operating system suggestions"
+						value={draft.os}
+						onChange={(text) => update("os", text)}
+						search={suggestOs}
+						isRecognised={isOs}
+					/>
+				</Field>
 				<Field
 					id="manual-cpuModel"
 					label="CPU model"
@@ -115,11 +159,7 @@ export function ManualSpecsForm({ value, onSubmit }: ManualSpecsFormProps) {
 						onInput={(event) => update("ramGb", event.currentTarget.value)}
 					/>
 				</Field>
-				<Field
-					id="manual-vramGb"
-					label="Video memory (GB)"
-					hint="Your GPU's own VRAM"
-				>
+				<Field id="manual-vramGb" label="Video memory (GB)" hint={vramHint}>
 					<input
 						class={INPUT_CLASS}
 						type="number"
@@ -193,6 +233,7 @@ function Field({ id, label, hint, children }: FieldProps) {
 }
 
 interface Draft {
+	os: string;
 	cpuModel: string;
 	gpuName: string;
 	ramGb: string;
@@ -202,6 +243,7 @@ interface Draft {
 
 function toDraft(specs: ManualSpecs): Draft {
 	return {
+		os: specs.os ?? "",
 		cpuModel: specs.cpuModel ?? "",
 		gpuName: specs.gpuName ?? "",
 		ramGb: specs.ramGb?.toString() ?? "",
@@ -212,6 +254,7 @@ function toDraft(specs: ManualSpecs): Draft {
 
 function fromDraft(draft: Draft): ManualSpecs {
 	return {
+		os: draft.os.trim() || null,
 		cpuModel: draft.cpuModel.trim() || null,
 		gpuName: draft.gpuName.trim() || null,
 		ramGb: toPositive(draft.ramGb),

@@ -15,6 +15,8 @@ export function manualSpecsFromQuery(search: string): ManualSpecs | null {
 
 export function manualSpecsFromCheckQuery(query: CheckQuery): ManualSpecs {
 	return {
+		// The query always carries an os (defaulting to windows), so it cannot tell a choice from a default.
+		os: null,
 		cpuModel: query.cpu,
 		gpuName: query.gpu,
 		ramGb: query.ramGb,

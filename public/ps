@@ -50,6 +50,21 @@ function Get-CanirungtaNvidiaVram {
 	)
 }
 
+# Windows reports NVIDIA drivers as 31.0.15.5123; the version on the box and in release notes is 551.23
+# (the last five digits). Other vendors keep the raw string.
+function Format-CanirungtaDriver($gpu) {
+	$version = "$($gpu.DriverVersion)"
+	if ($gpu.Name -match 'NVIDIA' -and $version -match '^\d+\.\d+\.(\d+)\.(\d+)$') {
+		$digits = "$($Matches[1])$($Matches[2])"
+		if ($digits.Length -ge 5) {
+			$digits = $digits.Substring($digits.Length - 5)
+			return '{0}.{1}' -f $digits.Substring(0, 3), $digits.Substring(3)
+		}
+	}
+	if ($version) { return $version }
+	return $null
+}
+
 function Get-CanirungtaGpus {
 	$entries = Get-CanirungtaVramEntries
 	$controllers = @(Get-CimInstance Win32_VideoController)
@@ -82,20 +97,38 @@ function Get-CanirungtaGpus {
 
 			# Integrated GPUs borrow system RAM, which the registry size does not reflect.
 			# Radeon 680M / 780M / 8060S have no "RX"; discrete laptop cards (RX 6600M) do.
-			$integrated = $gpu.Name -match 'Intel.*(UHD|Iris|HD Graphics|Arc.*Graphics)|Radeon(\(TM\))? Graphics|Radeon(\(TM\))? \d{3,4}[MS]\b|Radeon.*Vega \d+ Graphics|Adreno|Qualcomm'
+			$integrated = $gpu.Name -match 'Intel.*(UHD|Iris|HD Graphics|Xe Graphics|Arc(\(TM\))? Graphics)|Radeon(\(TM\))? Graphics|Radeon(\(TM\))? \d{3,4}[MS]\b|Radeon.*Vega \d+ Graphics|Adreno|Qualcomm'
 
 			[ordered]@{
 				name = "$($gpu.Name)".Trim()
 				vramBytes = $bytes
-				driver = $gpu.DriverVersion
+				driver = Format-CanirungtaDriver $gpu
 				integrated = [bool]$integrated
 			}
 		}
 	)
 }
 
+# Drive letter -> 'ssd' | 'hdd'. NVMe is always flash; "Unspecified" (USB bridges, virtual disks,
+# Storage Spaces) stays unknown rather than guessed.
+function Get-CanirungtaDiskKinds {
+	$kinds = @{}
+	try {
+		$physical = @(Get-PhysicalDisk -ErrorAction Stop)
+		$partitions = @(Get-Partition -ErrorAction Stop | Where-Object { $_.DriveLetter })
+		foreach ($part in $partitions) {
+			$disk = $physical | Where-Object { $_.DeviceId -eq "$($part.DiskNumber)" } | Select-Object -First 1
+			if (-not $disk) { continue }
+			if ($disk.BusType -eq 'NVMe' -or $disk.MediaType -eq 'SSD') { $kinds["$($part.DriveLetter)"] = 'ssd' }
+			elseif ($disk.MediaType -eq 'HDD') { $kinds["$($part.DriveLetter)"] = 'hdd' }
+		}
+	} catch { }
+	return $kinds
+}
+
 # Local fixed drives only: the game may be installed off the system drive.
 function Get-CanirungtaDisks {
+	$kinds = Get-CanirungtaDiskKinds
 	@(
 		Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' |
 			Where-Object { $_.Size } |
@@ -103,9 +136,39 @@ function Get-CanirungtaDisks {
 				[ordered]@{
 					freeBytes = [uint64]$_.FreeSpace
 					totalBytes = [uint64]$_.Size
+					kind = $kinds["$($_.DeviceID)".Substring(0, 1)]
+					label = "$($_.DeviceID)"
 				}
 			}
 	)
+}
+
+# SMBIOS memory type codes for the common desktop and laptop kinds.
+function Get-CanirungtaRam($cs) {
+	$modules = @(Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue)
+	$speeds = @($modules | ForEach-Object {
+		if ($_.ConfiguredClockSpeed) { $_.ConfiguredClockSpeed } else { $_.Speed }
+	} | Where-Object { $_ })
+	# Mixed sticks run at the slowest one.
+	$speed = if ($speeds.Count -gt 0) { ($speeds | Measure-Object -Minimum).Minimum } else { $null }
+	$code = [int](($modules | ForEach-Object { if ($_.SMBIOSMemoryType) { $_.SMBIOSMemoryType } else { $_.MemoryType } } | Where-Object { $_ } | Select-Object -First 1))
+	$type = switch ($code) {
+		20 { 'DDR' }
+		21 { 'DDR2' }
+		24 { 'DDR3' }
+		26 { 'DDR4' }
+		29 { 'LPDDR3' }
+		30 { 'LPDDR4' }
+		34 { 'DDR5' }
+		35 { 'LPDDR5' }
+		default { $null }
+	}
+	return [ordered]@{
+		totalBytes = [uint64]$cs.TotalPhysicalMemory
+		unified = $false
+		speedMhz = $speed
+		type = $type
+	}
 }
 
 function Get-CanirungtaProbe {
@@ -145,17 +208,29 @@ function Write-CanirungtaSummary($probe) {
 	Write-Output 'canirungta probe (nothing is sent until you open the link; the data stays in the URL fragment)'
 	Write-Output ''
 	Write-Output ('  {0,-8}{1}' -f 'OS', $probe.os.name)
-	Write-Output ('  {0,-8}{1} ({2} threads)' -f 'CPU', $probe.cpu.model, $probe.cpu.logicalCores)
-	Write-Output ('  {0,-8}{1}' -f 'RAM', (Format-CanirungtaGb $probe.memory.totalBytes))
+
+	$cpuDetail = @()
+	if ($probe.cpu.physicalCores) { $cpuDetail += "$($probe.cpu.physicalCores) cores / $($probe.cpu.logicalCores) threads" }
+	else { $cpuDetail += "$($probe.cpu.logicalCores) threads" }
+	if ($probe.cpu.maxClockMhz) { $cpuDetail += ('up to {0:0.0} GHz' -f ($probe.cpu.maxClockMhz / 1000)) }
+	Write-Output ('  {0,-8}{1} ({2})' -f 'CPU', $probe.cpu.model, ($cpuDetail -join ', '))
+
+	$ram = Format-CanirungtaGb $probe.memory.totalBytes
+	$ramDetail = (@($probe.memory.type, $(if ($probe.memory.speedMhz) { "$($probe.memory.speedMhz) MHz" })) | Where-Object { $_ }) -join ' '
+	if ($ramDetail) { $ram = "$ram $ramDetail" }
+	Write-Output ('  {0,-8}{1}' -f 'RAM', $ram)
+
 	foreach ($gpu in $probe.gpus) {
 		$detail = @()
 		if ($null -ne $gpu.vramBytes) { $detail += "$(Format-CanirungtaGb $gpu.vramBytes) VRAM" }
 		if ($gpu.integrated) { $detail += 'integrated' }
+		if ($gpu.driver) { $detail += "driver $($gpu.driver)" }
 		$suffix = if ($detail.Count -gt 0) { " ($($detail -join ', '))" } else { '' }
 		Write-Output ('  {0,-8}{1}{2}' -f 'GPU', $gpu.name, $suffix)
 	}
 	foreach ($disk in $probe.disks) {
-		Write-Output ('  {0,-8}{1} free of {2}' -f 'Disk', (Format-CanirungtaGb $disk.freeBytes), (Format-CanirungtaGb $disk.totalBytes))
+		$kind = switch ($disk.kind) { 'ssd' { ' SSD' } 'hdd' { ' HDD' } default { '' } }
+		Write-Output ('  {0,-8}{1} free of {2}{3} ({4})' -f 'Disk', (Format-CanirungtaGb $disk.freeBytes), (Format-CanirungtaGb $disk.totalBytes), $kind, $disk.label)
 	}
 	Write-Output ('  {0,-8}{1}' -f 'Vulkan', 'not tested')
 	Write-Output ''
@@ -171,17 +246,28 @@ function ConvertTo-CanirungtaMib($bytes) {
 	return [string][math]::Floor($bytes / 1MB)
 }
 
-# Positional array, version 3 (same layout as public/sh, CPU model last), built by hand because
-# ConvertTo-Json unrolls single-element arrays. The link carries MiB to stay short.
+function ConvertTo-CanirungtaNumOrNull($value) {
+	if ($null -eq $value -or "$value" -eq '') { return 'null' }
+	return [string][int64]$value
+}
+
+# Positional array, version 4 (same layout as public/sh), built by hand because ConvertTo-Json
+# unrolls single-element arrays. The link carries MiB to stay short.
+# [4, family, OS name, Windows major, 64-bit flag, RAM MiB, unified, logical cores,
+#  [[gpu name, VRAM MiB, integrated, driver]], [[free MiB, "s"|"h"|null, total MiB, label]], vulkan,
+#  CPU model, physical cores, max MHz, RAM MHz, RAM type]
 function ConvertTo-CanirungtaLinkJson($probe) {
 	$major = ($probe.os.version -split '\.')[0]
 	$is64 = if ($probe.os.arch -match '64') { '1' } elseif ($probe.os.arch -match '32') { '0' } else { 'null' }
 	$gpus = @($probe.gpus | ForEach-Object {
 		$integrated = if ($_.integrated) { '1' } else { '0' }
-		"[$(ConvertTo-CanirungtaJsonValue $_.name),$(ConvertTo-CanirungtaMib $_.vramBytes),$integrated]"
+		"[$(ConvertTo-CanirungtaJsonValue $_.name),$(ConvertTo-CanirungtaMib $_.vramBytes),$integrated,$(ConvertTo-CanirungtaJsonValue $_.driver)]"
 	}) -join ','
-	$disks = @($probe.disks | ForEach-Object { ConvertTo-CanirungtaMib $_.freeBytes }) -join ','
-	return "[3,`"w`",$(ConvertTo-CanirungtaJsonValue $probe.os.name),$major,$is64,$(ConvertTo-CanirungtaMib $probe.memory.totalBytes),0,$($probe.cpu.logicalCores),[$gpus],[$disks],null,$(ConvertTo-CanirungtaJsonValue $probe.cpu.model)]"
+	$disks = @($probe.disks | ForEach-Object {
+		$kind = switch ($_.kind) { 'ssd' { '"s"' } 'hdd' { '"h"' } default { 'null' } }
+		"[$(ConvertTo-CanirungtaMib $_.freeBytes),$kind,$(ConvertTo-CanirungtaMib $_.totalBytes),$(ConvertTo-CanirungtaJsonValue $_.label)]"
+	}) -join ','
+	return "[4,`\"w`\",$(ConvertTo-CanirungtaJsonValue $probe.os.name),$major,$is64,$(ConvertTo-CanirungtaMib $probe.memory.totalBytes),0,$($probe.cpu.logicalCores),[$gpus],[$disks],null,$(ConvertTo-CanirungtaJsonValue $probe.cpu.model),$(ConvertTo-CanirungtaNumOrNull $probe.cpu.physicalCores),$(ConvertTo-CanirungtaNumOrNull $probe.cpu.maxClockMhz),$(ConvertTo-CanirungtaNumOrNull $probe.memory.speedMhz),$(ConvertTo-CanirungtaJsonValue $probe.memory.type)]"
 }
 
 $probe = Get-CanirungtaProbe
