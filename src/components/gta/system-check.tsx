@@ -2,12 +2,20 @@ import { useEffect, useState } from "preact/hooks";
 
 import { CommandPanel } from "@/components/gta/command-panel";
 import { ProbeDialog } from "@/components/gta/probe-dialog";
+import { SettingsMenu } from "@/components/gta/settings-menu";
 import { VersionRow } from "@/components/gta/version-row";
 
 import { GTA_VERSIONS } from "@/constants/gta/versions";
 
 import { checkGtaVersion } from "@/lib/gta/check-version";
+import { detectResolution } from "@/lib/gta/detect-resolution";
+import type { ResolutionId } from "@/lib/gta/performance-types";
+import { loadResolution, saveResolution } from "@/lib/gta/resolution-storage";
 import type { CoverImage } from "@/lib/gta/types";
+import {
+	loadInstallDisk,
+	saveInstallDisk,
+} from "@/lib/machine/install-disk-storage";
 import {
 	applyManualSpecs,
 	EMPTY_MANUAL_SPECS,
@@ -16,11 +24,12 @@ import {
 	saveManualSpecs,
 } from "@/lib/machine/manual-specs";
 import { manualSpecsFromQuery } from "@/lib/machine/manual-specs-from-query";
-import { loadProbe, saveProbe } from "@/lib/machine/probe-storage";
+import { clearProbe, loadProbe, saveProbe } from "@/lib/machine/probe-storage";
 import { readProbeFromHash } from "@/lib/machine/read-probe-fragment";
 import { specsFromBrowser } from "@/lib/machine/specs-from-browser";
 import { specsFromProbe } from "@/lib/machine/specs-from-probe";
 import type { MachineSpecs } from "@/lib/machine/types";
+import { getDisplayInfo } from "@/lib/system-info/get-display-info";
 import { getSystemInfo } from "@/lib/system-info/get-system-info";
 import { registerCheckTool } from "@/lib/webmcp/register-check-tool";
 
@@ -38,6 +47,10 @@ interface LoadedSpecs {
 export function SystemCheck({ covers }: SystemCheckProps) {
 	const [loaded, setLoaded] = useState<LoadedSpecs | null>(null);
 	const [manual, setManual] = useState<ManualSpecs>(EMPTY_MANUAL_SPECS);
+	const [resolution, setResolution] = useState<ResolutionId | null>(null);
+	const [installDisk, setInstallDisk] = useState<string | null>(null);
+	const [detectedResolution, setDetectedResolution] =
+		useState<ResolutionId | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -48,6 +61,9 @@ export function SystemCheck({ covers }: SystemCheckProps) {
 		setManual(
 			manualSpecsFromQuery(window.location.search) ?? loadManualSpecs(),
 		);
+		setResolution(loadResolution());
+		setInstallDisk(loadInstallDisk());
+		setDetectedResolution(detectResolution(getDisplayInfo()));
 		registerCheckTool((next) => {
 			setManual(next);
 			saveManualSpecs(next);
@@ -66,7 +82,25 @@ export function SystemCheck({ covers }: SystemCheckProps) {
 		}
 	}
 
-	const specs = loaded ? applyManualSpecs(loaded.specs, manual) : null;
+	function pickResolution(next: ResolutionId) {
+		setResolution(next);
+		saveResolution(next);
+	}
+
+	function pickInstallDisk(next: string | null) {
+		setInstallDisk(next);
+		saveInstallDisk(next);
+	}
+
+	function forgetProbe() {
+		clearProbe();
+		void loadSpecs().then(setLoaded);
+	}
+
+	const withManual = loaded ? applyManualSpecs(loaded.specs, manual) : null;
+	const specs = withManual
+		? { ...withManual, installDiskId: installDisk }
+		: null;
 	const reports = specs
 		? GTA_VERSIONS.map((version) => checkGtaVersion(version, specs))
 		: null;
@@ -77,6 +111,13 @@ export function SystemCheck({ covers }: SystemCheckProps) {
 
 	return (
 		<div class="flex flex-col gap-12 sm:gap-16">
+			<SettingsMenu
+				disks={specs?.disks ?? []}
+				installDisk={installDisk}
+				onInstallDiskChange={pickInstallDisk}
+				savedAt={loaded?.savedAt ?? null}
+				onClearProbe={forgetProbe}
+			/>
 			<section id="exact-results" class="scroll-mt-8">
 				<CommandPanel manual={manual} onManualSubmit={submitManual} />
 			</section>
@@ -89,6 +130,8 @@ export function SystemCheck({ covers }: SystemCheckProps) {
 						report={reports?.[index] ?? null}
 						cover={covers[version.id]}
 						offerExactResults={offerExactResults}
+						resolution={resolution ?? detectedResolution}
+						onResolutionChange={pickResolution}
 					/>
 				))}
 			</ul>

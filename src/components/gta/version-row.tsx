@@ -1,8 +1,11 @@
 import { CheckItem } from "@/components/gta/check-item";
 import { CheckItemSkeleton } from "@/components/gta/check-item-skeleton";
+import { PerformanceCard } from "@/components/gta/performance-card";
+import { PerformanceSkeleton } from "@/components/gta/performance-skeleton";
 import { VerdictSkeleton } from "@/components/gta/verdict-skeleton";
 import { VerdictText } from "@/components/gta/verdict-text";
 
+import type { ResolutionId } from "@/lib/gta/performance-types";
 import type {
 	Confidence,
 	CoverImage,
@@ -13,8 +16,9 @@ import { openExactResults } from "@/lib/machine/open-exact-results";
 
 import { ExternalLinkIcon } from "@/icons/external-link";
 
-// RAM, VRAM, disk and OS always show; CPU and GPU rows only exist when the publisher names hardware.
-const BASE_CHECK_COUNT = 4;
+// CPU, GPU, RAM, VRAM, disk and OS. CPU and GPU can drop out when nothing was detected, so the
+// skeleton may show one or two tiles too many for a moment.
+const CHECK_COUNT = 6;
 
 const CONFIDENCE_LABELS: Record<Confidence, string> = {
 	official: "Official minimum",
@@ -32,6 +36,9 @@ interface VersionRowProps {
 	cover?: CoverImage;
 	// Detection left gaps: point the visitor at the exact-results panel.
 	offerExactResults?: boolean;
+	// Shared by every row, so the visitor picks their monitor once; null = each game's best.
+	resolution: ResolutionId | null;
+	onResolutionChange: (resolution: ResolutionId) => void;
 }
 
 export function VersionRow({
@@ -40,14 +47,12 @@ export function VersionRow({
 	cover,
 	index,
 	offerExactResults = false,
+	resolution,
+	onResolutionChange,
 }: VersionRowProps) {
 	// Rows past the first few start together so the last doesn't wait seconds.
 	const rowDelay = Math.min(index, 3) * 120;
 	const confidenceLabel = CONFIDENCE_LABELS[version.confidence];
-	const checkCount =
-		BASE_CHECK_COUNT +
-		(version.minimum.cpu ? 1 : 0) +
-		(version.minimum.gpu ? 1 : 0);
 
 	return (
 		<li
@@ -112,6 +117,21 @@ export function VersionRow({
 						</button>
 					)}
 				</div>
+				{report ? (
+					// Phones and tablets have no build to estimate for.
+					report.verdict !== "unsupported" && (
+						<PerformanceCard
+							report={report.performance}
+							title={`${version.title} ${version.edition}`}
+							resolution={resolution}
+							onResolutionChange={onResolutionChange}
+							belowMinimum={report.verdict === "cannot"}
+							delay={rowDelay}
+						/>
+					)
+				) : (
+					<PerformanceSkeleton />
+				)}
 				<ul class="glass col-span-full grid overflow-hidden rounded-xl shadow-(--shadow-card) sm:rounded-2xl md:grid-cols-2">
 					{report
 						? report.checks.map((check, checkIndex) => (
@@ -121,7 +141,7 @@ export function VersionRow({
 									delay={rowDelay + checkIndex * 70}
 								/>
 							))
-						: Array.from({ length: checkCount }, (_, index) => (
+						: Array.from({ length: CHECK_COUNT }, (_, index) => (
 								<CheckItemSkeleton key={index} />
 							))}
 				</ul>

@@ -4,6 +4,7 @@ import { CopyButton } from "@/components/gta/copy-button";
 import { HighlightedCommand } from "@/components/gta/highlighted-command";
 import { OpenInBrowserToggle } from "@/components/gta/open-in-browser-toggle";
 import { ScriptTrust } from "@/components/gta/script-trust";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
 import {
 	getProbeCommand,
@@ -38,28 +39,13 @@ export function ProbeCommand() {
 	return (
 		<div class="flex flex-col gap-3">
 			<div class="flex flex-wrap items-center justify-between gap-3">
-				<div
-					role="tablist"
-					aria-label="Operating system"
-					class="glass flex max-w-full rounded-full p-0.5"
-				>
-					{TABS.map((tab) => (
-						<button
-							key={tab.id}
-							type="button"
-							role="tab"
-							aria-selected={tab.id === platform}
-							onClick={() => setPlatform(tab.id)}
-							class={`h-9 cursor-pointer rounded-full px-3.5 font-medium text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent sm:h-7 sm:px-3 sm:text-xs ${
-								tab.id === platform
-									? "bg-ink/10 text-foreground ring-1 ring-ink/10 ring-inset"
-									: "text-muted-foreground hover:text-foreground"
-							}`}
-						>
-							{tab.label}
-						</button>
-					))}
-				</div>
+				<SegmentedControl
+					kind="tabs"
+					label="Operating system"
+					value={platform}
+					onChange={setPlatform}
+					options={TABS.map((tab) => ({ id: tab.id, label: tab.label }))}
+				/>
 				<p class="text-muted-foreground text-sm sm:text-xs">
 					Reads hardware only, then opens this page with the data.{" "}
 					<a

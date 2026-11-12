@@ -228,6 +228,21 @@
 	}
 }
 
+/* Bars wipe in from the left; clip-path keeps the rounded end intact, unlike scaleX. */
+@keyframes bar-wipe {
+	from {
+		clip-path: inset(0 100% 0 0 round 999px);
+	}
+	to {
+		clip-path: inset(0 0 0 0 round 999px);
+	}
+}
+
+@utility animate-bar {
+	animation: bar-wipe 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	animation-delay: calc(var(--delay, 0ms) + 150ms);
+}
+
 @utility animate-rise {
 	animation: rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
 	animation-delay: var(--delay, 0ms);

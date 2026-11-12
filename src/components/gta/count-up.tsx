@@ -15,6 +15,8 @@ function ease(t: number): number {
 
 export function CountUp({ value, delay = 0 }: CountUpProps) {
 	const ref = useRef<HTMLSpanElement>(null);
+	// Last figure shown: a changed value counts on from it instead of restarting at zero.
+	const shownRef = useRef<number | null>(null);
 
 	// Layout effect so the 0 is in place before first paint (no flash of the final value).
 	useLayoutEffect(() => {
@@ -29,16 +31,24 @@ export function CountUp({ value, delay = 0 }: CountUpProps) {
 		}
 
 		const decimals = value.split(".")[1]?.length ?? 0;
-		el.textContent = (0).toFixed(decimals);
+		const from = shownRef.current ?? 0;
+		// Only the entrance waits for its tile; later changes answer the click at once.
+		const wait = shownRef.current === null ? delay : 0;
+		shownRef.current = target;
+		el.textContent = from.toFixed(decimals);
 
 		let frame = 0;
 		let startedAt: number | null = null;
 		function step(now: number) {
 			startedAt ??= now;
-			const elapsed = now - startedAt - delay;
+			const elapsed = now - startedAt - wait;
 			const progress = Math.min(Math.max(elapsed / DURATION_MS, 0), 1);
 			// Written straight to the DOM: no re-render per frame.
-			if (el) el.textContent = (target * ease(progress)).toFixed(decimals);
+			if (el) {
+				el.textContent = (from + (target - from) * ease(progress)).toFixed(
+					decimals,
+				);
+			}
 			if (progress < 1) frame = requestAnimationFrame(step);
 		}
 		frame = requestAnimationFrame(step);
