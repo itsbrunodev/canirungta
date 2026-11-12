@@ -47,6 +47,9 @@ export function buildStructuredData({
 				featureList: [
 					"Checks RAM, video memory, disk space and operating system",
 					"Compares your PC to published minimum requirements",
+					"Estimates average FPS per resolution (720p to 4K) and graphics preset from your GPU and CPU",
+					"Flags whether the CPU, GPU, VRAM or RAM limits performance",
+					"Checks install drive free space",
 					"Runs in your browser; optional system probe for exact figures",
 				],
 				about: GTA_VERSIONS.map((v) => ({

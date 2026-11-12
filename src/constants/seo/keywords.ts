@@ -14,4 +14,8 @@ export const SITE_KEYWORDS: string[] = [
 	"GTA minimum requirements",
 	"GTA recommended requirements",
 	"GTA PC compatibility checker",
+	"GTA FPS calculator",
+	"GTA PC FPS estimate",
+	"GTA 5 Enhanced FPS on my PC",
+	"GTA performance benchmark by GPU",
 ];

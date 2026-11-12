@@ -1,7 +1,7 @@
 {
 	"name": "Can I run GTA?",
 	"short_name": "Can I run GTA?",
-	"description": "Check whether your PC can run every PC version of Grand Theft Auto.",
+	"description": "Check whether your PC can run every PC version of Grand Theft Auto, with estimated FPS.",
 	"start_url": "/",
 	"scope": "/",
 	"display": "browser",
