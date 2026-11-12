@@ -29,3 +29,6 @@ photopea/
 
 # full BuildCores dumps, regenerate with pnpm specs (src/data/hardware is committed)
 /data/
+
+# python bytecode
+__pycache__/
