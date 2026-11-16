@@ -2,12 +2,13 @@ import { VERSION_IDS, VERSION_PARAM } from "@/constants/api/check-params";
 import { GTA_VERSIONS } from "@/constants/gta/versions";
 
 import { toolResult } from "@/lib/mcp/tool-result";
+import { gamePageUrl } from "@/lib/seo/game-page-url";
 
 export const REQUIREMENTS_TOOL = {
 	name: "list_gta_requirements",
 	title: "List GTA system requirements",
 	description:
-		"Published minimum and recommended PC specs for each Grand Theft Auto release, with source URL and confidence (official, approximate, unannounced). A null figure means none was published.",
+		"Published minimum and recommended PC specs for each Grand Theft Auto release, with source URL, confidence (official, approximate, unannounced) and pageUrl (the game's page on the site, with FPS tables and an FAQ). A null figure means none was published.",
 	inputSchema: {
 		type: "object",
 		properties: {
@@ -39,6 +40,6 @@ export function runRequirementsTool(args: Record<string, unknown>) {
 	}
 	const versions = GTA_VERSIONS.filter(
 		(version) => wanted.length === 0 || wanted.includes(version.id),
-	);
+	).map((version) => ({ ...version, pageUrl: gamePageUrl(version.id) }));
 	return toolResult({ versions });
 }

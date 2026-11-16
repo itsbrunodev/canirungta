@@ -9,6 +9,7 @@ import { scoreCpu } from "@/lib/hardware/score-cpu";
 import { scoreGpu } from "@/lib/hardware/score-gpu";
 import { suggestCpus, suggestGpus } from "@/lib/hardware/suggest-hardware";
 import { manualSpecsFromQuery } from "@/lib/machine/manual-specs-from-query";
+import { runRequirementsTool } from "@/lib/mcp/requirements-tool";
 
 function check(query: string) {
 	return buildCheckResponse(parseCheckQuery(new URLSearchParams(query)));
@@ -111,5 +112,38 @@ describe("buildRequirementsMarkdown", () => {
 		for (const id of VERSION_IDS) expect(markdown).toContain(`\`${id}\``);
 		expect(markdown).toContain("| RAM | 8 GB | 16 GB |");
 		expect(markdown).not.toContain("null");
+	});
+});
+
+describe("game page links", () => {
+	it("give every check result its game page", () => {
+		for (const result of check("ram=16").results) {
+			expect(result.pageUrl, result.id).toMatch(
+				/^https:\/\/canirungta\.com\/gta-/,
+			);
+		}
+		expect(check("ram=16&version=gta-sa-original").results[0]?.pageUrl).toBe(
+			"https://canirungta.com/gta-san-andreas",
+		);
+	});
+
+	it("open one game's page when the check covers only that game", () => {
+		const single = new URL(
+			check("ram=16&version=gta-v-enhanced,gta-v-2015").resultsUrl,
+		);
+		expect(single.pathname).toBe("/gta-5");
+		expect(single.searchParams.get("ram")).toBe("16");
+		const mixed = new URL(check("ram=16&version=gta-vi,gta-v-2015").resultsUrl);
+		expect(mixed.pathname).toBe("/");
+	});
+
+	it("include pageUrl in the MCP requirements tool and the Markdown", () => {
+		const text = JSON.stringify(
+			runRequirementsTool({ version: "gta-iv-complete" }),
+		);
+		expect(text).toContain("https://canirungta.com/gta-4");
+		expect(buildRequirementsMarkdown()).toContain(
+			"- Page: https://canirungta.com/gta-vice-city",
+		);
 	});
 });

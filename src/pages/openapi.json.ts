@@ -177,6 +177,12 @@ const spec = {
 						enum: ["official", "approximate", "unannounced"],
 					},
 					sourceUrl: { type: "string" },
+					pageUrl: {
+						type: "string",
+						format: "uri",
+						description:
+							"This game's page on the site: requirements, FPS tables per edition and an FAQ",
+					},
 					minimum: REQUIREMENT_SCHEMA,
 					recommended: {
 						oneOf: [REQUIREMENT_SCHEMA, { type: "null" }],
@@ -208,7 +214,8 @@ const spec = {
 					},
 					resultsUrl: {
 						type: "string",
-						description: "Web page showing this check; share it with the user",
+						description:
+							"Web page showing this check; share it with the user. Opens the game's own page when `version` covers a single game, else the homepage",
 					},
 					results: {
 						type: "array",
@@ -238,6 +245,12 @@ const spec = {
 									enum: ["official", "approximate", "unannounced"],
 								},
 								sourceUrl: { type: "string" },
+								pageUrl: {
+									type: "string",
+									format: "uri",
+									description:
+										"This game's page on the site: requirements, FPS tables per edition and an FAQ",
+								},
 								performance: PERFORMANCE_SCHEMA,
 								checks: {
 									type: "array",

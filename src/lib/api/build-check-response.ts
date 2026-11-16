@@ -7,6 +7,7 @@ import { checkGtaVersion } from "@/lib/gta/check-version";
 import { scoreCpu } from "@/lib/hardware/score-cpu";
 import { scoreGpu } from "@/lib/hardware/score-gpu";
 import { suggestCpus, suggestGpus } from "@/lib/hardware/suggest-hardware";
+import { gamePageUrl } from "@/lib/seo/game-page-url";
 
 export function buildCheckResponse({ query, specs, errors }: ParsedCheckQuery) {
 	const warnings: string[] = [];
@@ -37,6 +38,7 @@ export function buildCheckResponse({ query, specs, errors }: ParsedCheckQuery) {
 			summary: summarizeReport(report),
 			confidence: version.confidence,
 			sourceUrl: version.sourceUrl,
+			pageUrl: gamePageUrl(version.id),
 			checks: report.checks,
 			// Estimated FPS per resolution and preset.
 			performance: report.performance,

@@ -1,7 +1,13 @@
 import { GTA_VERSIONS } from "@/constants/gta/versions";
 
+import { gamePageUrl } from "@/lib/seo/game-page-url";
+
 export function GET() {
-	return new Response(JSON.stringify(GTA_VERSIONS, null, 2), {
+	const versions = GTA_VERSIONS.map((version) => ({
+		...version,
+		pageUrl: gamePageUrl(version.id),
+	}));
+	return new Response(JSON.stringify(versions, null, 2), {
 		headers: { "Content-Type": "application/json" },
 	});
 }

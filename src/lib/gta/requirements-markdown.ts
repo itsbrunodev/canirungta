@@ -3,6 +3,7 @@ import { SITE_URL } from "@/constants/site";
 
 import { formatGb } from "@/lib/gta/format-gb";
 import type { GtaRequirement, GtaVersion } from "@/lib/gta/types";
+import { gamePageUrl } from "@/lib/seo/game-page-url";
 
 const CONFIDENCE_NOTES: Record<GtaVersion["confidence"], string> = {
 	official: "official (published by Rockstar)",
@@ -35,6 +36,7 @@ function versionSection(version: GtaVersion): string[] {
 		`- id: \`${version.id}\``,
 		`- Confidence: ${CONFIDENCE_NOTES[version.confidence]}`,
 		`- Source: ${version.sourceUrl}`,
+		`- Page: ${gamePageUrl(version.id)} (FPS tables and FAQ)`,
 		`- OS: ${windows}${os.requires64Bit ? ", 64-bit" : ""}`,
 		"",
 		"| Component | Minimum | Recommended |",
