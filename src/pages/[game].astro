@@ -63,7 +63,7 @@ const structuredData = buildGameStructuredData({
 <BaseLayout title={game.title} description={game.description} keywords={game.keywords} image={share}>
 	<PageShell>
 		<GameHeader game={game} />
-		<SystemCheck client:load covers={covers} versionIds={game.versionIds} />
+		<SystemCheck client:idle covers={covers} versionIds={game.versionIds} />
 		<GameRequirements game={game} versions={versions} />
 		<GameFpsSection game={game} editions={editions} />
 		<GameFaq shortName={game.shortName} items={faq} />

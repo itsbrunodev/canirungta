@@ -1,4 +1,4 @@
-import { ManualSpecsForm } from "@/components/gta/manual-specs-form";
+import { LazyManualSpecsForm } from "@/components/gta/lazy-manual-specs-form";
 import { ProbeCommand } from "@/components/gta/probe-command";
 
 import type { ManualSpecs } from "@/lib/machine/manual-specs";
@@ -33,7 +33,7 @@ export function CommandPanel({ manual, onManualSubmit }: CommandPanelProps) {
 					<h2 class="font-semibold text-base text-foreground sm:text-lg">
 						Or enter your specs by hand
 					</h2>
-					<ManualSpecsForm value={manual} onSubmit={onManualSubmit} />
+					<LazyManualSpecsForm value={manual} onSubmit={onManualSubmit} />
 				</div>
 			</div>
 		</details>

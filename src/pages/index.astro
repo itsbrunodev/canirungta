@@ -46,7 +46,7 @@ const structuredData = buildStructuredData({
 			</Fragment>
 			<p slot="note">{DEFAULT_HERO_NOTE}</p>
 		</PageHero>
-		<SystemCheck client:load covers={covers} />
+		<SystemCheck client:idle covers={covers} />
 		<RequirementsOverview />
 		<GameLinks />
 		<!-- Results need JavaScript; no-JS readers and crawlers get the data and the API instead. -->

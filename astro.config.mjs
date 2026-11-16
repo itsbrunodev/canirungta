@@ -17,6 +17,8 @@ export default defineConfig({
 	// Static pages by default; only /api/check runs on the server.
 	adapter: vercel(),
 	integrations: [preact(), sitemap()],
+	// One ~47KB stylesheet blocks first paint; inlining removes that request and the CSS -> font chain.
+	build: { inlineStylesheets: "always" },
 	// The toolbar injects its own links and markup, which skews Lighthouse/axe runs against `astro dev`.
 	devToolbar: { enabled: false },
 

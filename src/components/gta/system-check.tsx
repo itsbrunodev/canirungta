@@ -7,7 +7,7 @@ import { VersionRow } from "@/components/gta/version-row";
 
 import { GTA_VERSIONS } from "@/constants/gta/versions";
 
-import { checkGtaVersion } from "@/lib/gta/check-version";
+import type { checkGtaVersion } from "@/lib/gta/check-version";
 import { detectResolution } from "@/lib/gta/detect-resolution";
 import type { ResolutionId } from "@/lib/gta/performance-types";
 import { loadResolution, saveResolution } from "@/lib/gta/resolution-storage";
@@ -31,7 +31,6 @@ import { specsFromProbe } from "@/lib/machine/specs-from-probe";
 import type { MachineSpecs } from "@/lib/machine/types";
 import { getDisplayInfo } from "@/lib/system-info/get-display-info";
 import { getSystemInfo } from "@/lib/system-info/get-system-info";
-import { registerCheckTool } from "@/lib/webmcp/register-check-tool";
 
 interface SystemCheckProps {
 	// Keyed by version id; built by getGtaCovers() in index.astro.
@@ -54,6 +53,8 @@ export function SystemCheck({ covers, versionIds }: SystemCheckProps) {
 	const [manual, setManual] = useState<ManualSpecs>(EMPTY_MANUAL_SPECS);
 	const [resolution, setResolution] = useState<ResolutionId | null>(null);
 	const [installDisk, setInstallDisk] = useState<string | null>(null);
+	// The check engine bundles the hardware datasets, so it loads after hydration as its own chunk.
+	const [check, setCheck] = useState<typeof checkGtaVersion | null>(null);
 	const [detectedResolution, setDetectedResolution] =
 		useState<ResolutionId | null>(null);
 
@@ -69,9 +70,15 @@ export function SystemCheck({ covers, versionIds }: SystemCheckProps) {
 		setResolution(loadResolution());
 		setInstallDisk(loadInstallDisk());
 		setDetectedResolution(detectResolution(getDisplayInfo()));
-		registerCheckTool((next) => {
-			setManual(next);
-			saveManualSpecs(next);
+		void import("@/lib/gta/check-version").then((module) => {
+			if (!cancelled) setCheck(() => module.checkGtaVersion);
+		});
+		void import("@/lib/webmcp/register-check-tool").then((module) => {
+			if (cancelled) return;
+			module.registerCheckTool((next) => {
+				setManual(next);
+				saveManualSpecs(next);
+			});
 		});
 		return () => {
 			cancelled = true;
@@ -106,9 +113,8 @@ export function SystemCheck({ covers, versionIds }: SystemCheckProps) {
 	const specs = withManual
 		? { ...withManual, installDiskId: installDisk }
 		: null;
-	const reports = specs
-		? versions.map((version) => checkGtaVersion(version, specs))
-		: null;
+	const reports =
+		specs && check ? versions.map((version) => check(version, specs)) : null;
 	// Detection gaps can be closed by the probe or by typing; point at both when a verdict is unsure.
 	const offerExactResults =
 		loaded?.specs.source === "browser" &&
