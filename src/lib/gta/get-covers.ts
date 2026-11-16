@@ -45,9 +45,9 @@ export async function getGtaCovers(): Promise<Record<string, CoverImage>> {
 					src,
 					width: COVER_FALLBACK_WIDTH,
 					format: "webp",
-					quality: 80,
+					quality: 70,
 				}),
-				getImage({ src, widths: COVER_WIDTHS, format: "webp", quality: 80 }),
+				getImage({ src, widths: COVER_WIDTHS, format: "webp", quality: 70 }),
 				getImage({ src, width: COVER_BLUR_WIDTH, format: "webp", quality: 50 }),
 			]);
 

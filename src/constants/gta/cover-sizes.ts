@@ -1,5 +1,6 @@
-// Rendered cover width: 96px (mobile) up to 256px (lg). Widths cover 1x and 2x for each breakpoint.
-export const COVER_WIDTHS = [192, 384, 512];
+// Rendered cover width: 96px (mobile) up to 256px (lg). Widths cover 1x and 2x for each breakpoint;
+// 256 is the exact lg 1x size so desktop does not download 384.
+export const COVER_WIDTHS = [192, 256, 384, 512];
 
 // Used as the <img src> fallback for browsers without srcset support.
 export const COVER_FALLBACK_WIDTH = 384;
