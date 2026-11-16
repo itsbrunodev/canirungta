@@ -1,6 +1,7 @@
 ---
 import { SystemCheck } from "@/components/gta/system-check";
 import SiteFooter from "@/components/layout/site-footer.astro";
+import GameLinks from "@/components/seo/game-links.astro";
 import RequirementsOverview from "@/components/seo/requirements-overview.astro";
 
 import { getGtaCovers } from "@/lib/gta/get-covers";
@@ -52,6 +53,7 @@ const structuredData = buildStructuredData({
 		</header>
 		<SystemCheck client:load covers={covers} />
 		<RequirementsOverview />
+		<GameLinks />
 		<!-- Results need JavaScript; no-JS readers and crawlers get the data and the API instead. -->
 		<noscript>
 			<p class="text-muted-foreground text-center text-sm">

@@ -1,13 +1,12 @@
 import { GTA_VERSIONS } from "@/constants/gta/versions";
 import { SITE_KEYWORDS } from "@/constants/seo/keywords";
+import { SITE_NAME } from "@/constants/site";
 
 interface StructuredDataInput {
 	siteUrl: string;
 	description: string;
 	imageUrl?: string;
 }
-
-const SITE_NAME = "Can I run GTA?";
 
 // One @graph: Google reads WebSite + WebApplication; ids let the nodes reference each other.
 export function buildStructuredData({

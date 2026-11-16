@@ -36,6 +36,8 @@ import { registerCheckTool } from "@/lib/webmcp/register-check-tool";
 interface SystemCheckProps {
 	// Keyed by version id; built by getGtaCovers() in index.astro.
 	covers: Record<string, CoverImage>;
+	// Limit the list to these versions (game pages); absent = every version.
+	versionIds?: string[];
 }
 
 interface LoadedSpecs {
@@ -44,7 +46,10 @@ interface LoadedSpecs {
 	savedAt: string | null;
 }
 
-export function SystemCheck({ covers }: SystemCheckProps) {
+export function SystemCheck({ covers, versionIds }: SystemCheckProps) {
+	const versions = versionIds
+		? GTA_VERSIONS.filter((v) => versionIds.includes(v.id))
+		: GTA_VERSIONS;
 	const [loaded, setLoaded] = useState<LoadedSpecs | null>(null);
 	const [manual, setManual] = useState<ManualSpecs>(EMPTY_MANUAL_SPECS);
 	const [resolution, setResolution] = useState<ResolutionId | null>(null);
@@ -102,7 +107,7 @@ export function SystemCheck({ covers }: SystemCheckProps) {
 		? { ...withManual, installDiskId: installDisk }
 		: null;
 	const reports = specs
-		? GTA_VERSIONS.map((version) => checkGtaVersion(version, specs))
+		? versions.map((version) => checkGtaVersion(version, specs))
 		: null;
 	// Detection gaps can be closed by the probe or by typing; point at both when a verdict is unsure.
 	const offerExactResults =
@@ -122,7 +127,7 @@ export function SystemCheck({ covers }: SystemCheckProps) {
 				<CommandPanel manual={manual} onManualSubmit={submitManual} />
 			</section>
 			<ul id="versions" class="flex scroll-mt-8 flex-col" aria-busy={!reports}>
-				{GTA_VERSIONS.map((version, index) => (
+				{versions.map((version, index) => (
 					<VersionRow
 						key={version.id}
 						version={version}

@@ -12,6 +12,8 @@ import { scriptHashes } from "./vite-plugins/script-hashes.mjs";
 export default defineConfig({
 	// Used for canonical and Open Graph URLs; Astro.site is undefined without it.
 	site: "https://canirungta.com",
+	// One URL form per page (/gta-6, not /gta-6/): canonical, sitemap and links must agree.
+	trailingSlash: "never",
 	// Static pages by default; only /api/check runs on the server.
 	adapter: vercel(),
 	integrations: [preact(), sitemap()],

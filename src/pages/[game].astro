@@ -1,0 +1,84 @@
+---
+import { existsSync } from "node:fs";
+
+import { SystemCheck } from "@/components/gta/system-check";
+import SiteFooter from "@/components/layout/site-footer.astro";
+import GameFaq from "@/components/seo/game-faq.astro";
+import GameFpsTable from "@/components/seo/game-fps-table.astro";
+import GameLinks from "@/components/seo/game-links.astro";
+import GameRequirements from "@/components/seo/game-requirements.astro";
+
+import { MODERN_REFERENCE_GPUS } from "@/constants/gta/fps-reference-hardware";
+import { GAME_PAGES } from "@/constants/gta/game-pages";
+import { GTA_VERSIONS } from "@/constants/gta/versions";
+
+import { getGtaCovers } from "@/lib/gta/get-covers";
+import type { CoverImage } from "@/lib/gta/types";
+import { buildFpsTable } from "@/lib/seo/build-fps-table";
+import { buildGameFaq } from "@/lib/seo/build-game-faq";
+import { buildGameStructuredData } from "@/lib/seo/build-game-structured-data";
+
+import BaseLayout from "@/layouts/base-layout.astro";
+
+export function getStaticPaths() {
+	return GAME_PAGES.map((game) => ({
+		params: { game: game.slug },
+		props: { game },
+	}));
+}
+
+const { game } = Astro.props;
+const versions = GTA_VERSIONS.filter((v) => game.versionIds.includes(v.id));
+const primary = versions[0];
+if (!primary) throw new Error(`No versions for ${game.slug}`);
+
+const covers = await getGtaCovers();
+const fpsTable = buildFpsTable(primary.id, MODERN_REFERENCE_GPUS);
+const faq = buildGameFaq(game, primary, fpsTable);
+
+// Per-game card from public/og/<slug>.png when it exists, else the shared one.
+const hasOwnCard = existsSync(
+	new URL(`../../public/og/${game.slug}.png`, import.meta.url),
+);
+const share: CoverImage = {
+	src: hasOwnCard ? `/og/${game.slug}.png` : "/og.png",
+	width: 1200,
+	height: 630,
+	alt: `${game.h1} PC requirements and FPS checker`,
+};
+
+const siteUrl = Astro.site?.href ?? "https://canirungta.com/";
+const structuredData = buildGameStructuredData({
+	siteUrl,
+	game,
+	versions,
+	faq,
+	imageUrl: new URL(share.src, siteUrl).href,
+});
+---
+
+<BaseLayout title={game.title} description={game.description} keywords={game.keywords} image={share}>
+	<main id="main" class="relative mx-auto flex min-h-dvh max-w-6xl flex-col gap-12 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(3rem,env(safe-area-inset-top))] sm:pt-[max(4rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] sm:gap-16 sm:px-6 lg:px-8">
+		<header class="mx-auto my-6 flex max-w-3xl flex-col gap-4 text-center sm:my-10">
+			<p class="text-muted-foreground text-sm"><a class="underline" href="/">Can I run GTA?</a></p>
+			<h1 class="text-4xl font-bold tracking-tight text-balance min-[420px]:text-5xl lg:text-6xl">{game.h1}</h1>
+			<p class="text-foreground text-lg sm:text-xl">{game.intro}</p>
+			{game.notice && (
+				<p class="glass text-muted-foreground rounded-xl px-4 py-3 text-left text-sm" role="note">{game.notice}</p>
+			)}
+		</header>
+		<SystemCheck client:load covers={covers} versionIds={game.versionIds} />
+		<GameRequirements game={game} versions={versions} />
+		{fpsTable && <GameFpsTable game={game} table={fpsTable} projected={primary.confidence !== "official"} />}
+		<GameFaq shortName={game.shortName} items={faq} />
+		<GameLinks current={game.slug} />
+		<noscript>
+			<p class="text-muted-foreground text-center text-sm">
+				The checker needs JavaScript. Requirements are listed above and in
+				<a class="underline" href="/requirements.md">/requirements.md</a>.
+			</p>
+		</noscript>
+		<SiteFooter />
+	</main>
+	<script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+</BaseLayout>

@@ -1,0 +1,26 @@
+---
+import type { FaqItem } from "@/constants/gta/game-pages";
+
+interface Props {
+	shortName: string;
+	items: FaqItem[];
+}
+
+const { shortName, items } = Astro.props;
+---
+
+<section aria-labelledby="faq" class="w-full">
+	<h2 id="faq" class="text-foreground text-xl font-semibold tracking-tight sm:text-3xl">
+		{shortName} PC FAQ
+	</h2>
+	<div class="divide-border mt-6 divide-y">
+		{
+			items.map((item) => (
+				<details class="group py-4">
+					<summary class="text-foreground cursor-pointer font-medium marker:text-muted-foreground">{item.question}</summary>
+					<p class="text-muted-foreground mt-2 text-sm leading-relaxed">{item.answer}</p>
+				</details>
+			))
+		}
+	</div>
+</section>

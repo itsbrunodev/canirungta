@@ -1,0 +1,67 @@
+---
+// Server-rendered min/recommended tables so crawlers and no-JS readers get the specs.
+import type { GamePage } from "@/constants/gta/game-pages";
+
+import type { GtaVersion } from "@/lib/gta/types";
+import {
+	describeRequirement,
+	recommendedOf,
+} from "@/lib/seo/describe-requirement";
+
+interface Props {
+	game: GamePage;
+	versions: GtaVersion[];
+}
+
+const { game, versions } = Astro.props;
+---
+
+<section aria-labelledby="requirements" class="w-full">
+	<h2 id="requirements" class="text-foreground text-xl font-semibold tracking-tight sm:text-3xl">
+		{game.shortName} PC system requirements
+	</h2>
+	{
+		versions.map((version) => {
+			const min = describeRequirement(version.minimum, version);
+			const rec = describeRequirement(recommendedOf(version), version);
+			return (
+				<div class="mt-6">
+					{versions.length > 1 && (
+						<h3 class="text-foreground mb-2 font-medium">
+							{version.title} <span class="text-muted-foreground font-normal">{version.edition}</span>
+						</h3>
+					)}
+					<div class="overflow-x-auto">
+						<table class="w-full min-w-[28rem] border-collapse text-left text-sm">
+							<caption class="sr-only">
+								Minimum and recommended PC requirements for {version.title} {version.edition}
+							</caption>
+							<thead class="text-muted-foreground border-border border-b">
+								<tr>
+									<th scope="col" class="py-2 pr-4 font-medium">Component</th>
+									<th scope="col" class="py-2 pr-4 font-medium">Minimum</th>
+									<th scope="col" class="py-2 font-medium">Recommended</th>
+								</tr>
+							</thead>
+							<tbody class="text-foreground divide-border divide-y">
+								{min.map((row, i) => (
+									<tr>
+										<th scope="row" class="py-2 pr-4 font-medium">{row.label}</th>
+										<td class="py-2 pr-4">{row.value}</td>
+										<td class="py-2">{rec[i]?.value}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+					<p class="text-muted-foreground mt-2 text-sm">
+						{version.confidence === "official"
+							? "Figures published by Rockstar Games. "
+							: "Unofficial figures; not published by Rockstar. "}
+						<a class="underline" href={version.sourceUrl} target="_blank" rel="noopener noreferrer">Source</a>
+					</p>
+				</div>
+			);
+		})
+	}
+</section>
