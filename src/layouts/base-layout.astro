@@ -41,7 +41,8 @@ const imageUrl =
 		<meta name="keywords" content={keywords.join(", ")} />
 		<meta name="robots" content={noindex ? "noindex" : "index, follow"} />
 		<meta name="color-scheme" content="dark light" />
-		<meta name="theme-color" content="#060607" />
+		<!-- Static value is brand blue: Discord/Slack crawlers read it for the embed stripe. The inline script below swaps it to the canvas color for real browsers. -->
+		<meta name="theme-color" content="#3d8bff" />
 		<!-- Inline + render-blocking on purpose: sets the theme before first paint, so no flash. Colors mirror lib/theme/theme.ts. -->
 		<script is:inline define:vars={{ key: THEME_STORAGE_KEY }}>
 			(() => {
