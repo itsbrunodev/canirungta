@@ -1,0 +1,22 @@
+---
+// Glass card around a data table. The scroll area is a labelled, focusable region so keyboard
+// users can scroll it sideways on narrow screens.
+import { TABLE_CARD_CLASS } from "@/constants/seo/table-styles";
+
+interface Props {
+	label: string;
+}
+
+const { label } = Astro.props;
+---
+
+<div class={TABLE_CARD_CLASS}>
+	<div
+		role="region"
+		aria-label={label}
+		tabindex="0"
+		class="overflow-x-auto rounded-[inherit] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+	>
+		<slot />
+	</div>
+</div>

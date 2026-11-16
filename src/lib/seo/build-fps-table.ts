@@ -3,10 +3,15 @@ import {
 	FPS_TABLE_RAM_GB,
 	type ReferenceGpu,
 } from "@/constants/gta/fps-reference-hardware";
+import { PERFORMANCE_PROFILES } from "@/constants/gta/performance-profiles";
 import { GTA_VERSIONS } from "@/constants/gta/versions";
 
 import { checkPerformance } from "@/lib/gta/check-performance";
-import type { FpsEstimate, ResolutionId } from "@/lib/gta/performance-types";
+import type {
+	FpsEstimate,
+	PerformanceBasis,
+	ResolutionId,
+} from "@/lib/gta/performance-types";
 import { EMPTY_DETAILS, type MachineSpecs } from "@/lib/machine/types";
 
 const GIB = 1024 ** 3;
@@ -24,6 +29,9 @@ export interface FpsTable {
 	rows: FpsTableRow[];
 	cpu: string;
 	ramGb: number;
+	basis: PerformanceBasis;
+	// Every cell sits on the frame limiter, so a per-GPU table says nothing: show the cap instead.
+	lockedFps: number | null;
 }
 
 function machine(gpu: ReferenceGpu): MachineSpecs {
@@ -83,11 +91,18 @@ export function buildFpsTable(
 	}
 
 	if (rows.length === 0) return null;
+	const profile = PERFORMANCE_PROFILES[versionId];
+	const cap = profile?.fpsCap ?? null;
+	const locked =
+		cap !== null &&
+		rows.every((row) => row.cells.every((cell) => cell?.fps === cap));
 	return {
 		presetLabel,
 		resolutions,
 		rows,
 		cpu: FPS_TABLE_CPU.replace(/^AMD /, ""),
 		ramGb: FPS_TABLE_RAM_GB,
+		basis: profile?.basis ?? "benchmarks",
+		lockedFps: locked ? cap : null,
 	};
 }

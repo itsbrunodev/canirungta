@@ -4,6 +4,7 @@ import { CopyButton } from "@/components/gta/copy-button";
 import { HighlightedCommand } from "@/components/gta/highlighted-command";
 import { OpenInBrowserToggle } from "@/components/gta/open-in-browser-toggle";
 import { ScriptTrust } from "@/components/gta/script-trust";
+import { NewTabHint } from "@/components/ui/new-tab-hint";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 
 import {
@@ -55,6 +56,7 @@ export function ProbeCommand() {
 						class="text-foreground underline decoration-ink/30 underline-offset-2 hover:decoration-foreground"
 					>
 						View source
+						<NewTabHint />
 					</a>
 				</p>
 			</div>

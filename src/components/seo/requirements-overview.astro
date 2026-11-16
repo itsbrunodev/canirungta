@@ -1,56 +1,64 @@
 ---
+import SeoSection from "@/components/seo/seo-section.astro";
 // Server-rendered copy of the minimum specs, so crawlers and no-JS readers see the data without running the checker.
+import TableCard from "@/components/seo/table-card.astro";
+
 import { GTA_VERSIONS } from "@/constants/gta/versions";
+import {
+	TABLE_CELL_CLASS,
+	TABLE_HEAD_CELL_CLASS,
+	TABLE_ROW_CLASS,
+} from "@/constants/seo/table-styles";
 
 import { formatGb } from "@/lib/gta/format-gb";
 
 const NOT_PUBLISHED = "Not published";
+const CELL = `${TABLE_CELL_CLASS} whitespace-nowrap`;
 ---
 
-<section aria-labelledby="requirements-overview" class="w-full">
-	<h2 id="requirements-overview" class="text-foreground text-xl font-semibold tracking-tight sm:text-3xl">
-		Minimum PC requirements for every GTA version
-	</h2>
-	<p class="text-muted-foreground mt-2 text-sm">
+<SeoSection id="requirements-overview" title="Minimum PC requirements for every GTA version">
+	<Fragment slot="lede">
 		Published minimum figures. "Not published" means no figure exists yet, not zero.
-	</p>
-	<div class="mt-6 overflow-x-auto">
-		<table class="w-full min-w-[32rem] border-collapse text-left text-sm">
-			<caption class="sr-only">Minimum RAM, video memory, disk space and Windows version for each GTA PC release</caption>
-			<thead class="text-muted-foreground border-border border-b">
-				<tr>
-					<th scope="col" class="py-2 pr-4 font-medium">Version</th>
-					<th scope="col" class="py-2 pr-4 font-medium">RAM</th>
-					<th scope="col" class="py-2 pr-4 font-medium">VRAM</th>
-					<th scope="col" class="py-2 pr-4 font-medium">Disk</th>
-					<th scope="col" class="py-2 font-medium">OS</th>
-				</tr>
-			</thead>
-			<tbody class="text-foreground divide-border divide-y">
-				{
-					GTA_VERSIONS.map((version) => {
-						const min = version.minimum;
-						const windows =
-							version.os.minWindowsMajor === null
-								? "Windows"
-								: `Windows ${version.os.minWindowsMajor}+`;
-						return (
-							<tr>
-								<th scope="row" class="py-2 pr-4 font-medium">
-									{version.title} <span class="text-muted-foreground font-normal">{version.edition}</span>
-								</th>
-								<td class="py-2 pr-4 whitespace-nowrap">{formatGb(min.ramGb) ?? NOT_PUBLISHED}</td>
-								<td class="py-2 pr-4 whitespace-nowrap">{formatGb(min.vramGb) ?? NOT_PUBLISHED}</td>
-								<td class="py-2 pr-4 whitespace-nowrap">{formatGb(min.diskGb) ?? NOT_PUBLISHED}</td>
-								<td class="py-2 whitespace-nowrap">{windows}{version.os.requires64Bit ? ", 64-bit" : ""}</td>
-							</tr>
-						);
-					})
-				}
-			</tbody>
-		</table>
+	</Fragment>
+	<div class="flex flex-col gap-3">
+		<TableCard label="Minimum requirements for every GTA version">
+				<table class="w-full min-w-[32rem] border-collapse text-left text-sm sm:text-base">
+					<caption class="sr-only">Minimum RAM, video memory, disk space and Windows version for each GTA PC release</caption>
+					<thead>
+						<tr>
+							<th scope="col" class={TABLE_HEAD_CELL_CLASS}>Version</th>
+							<th scope="col" class={TABLE_HEAD_CELL_CLASS}>RAM</th>
+							<th scope="col" class={TABLE_HEAD_CELL_CLASS}>VRAM</th>
+							<th scope="col" class={TABLE_HEAD_CELL_CLASS}>Disk</th>
+							<th scope="col" class={TABLE_HEAD_CELL_CLASS}>OS</th>
+						</tr>
+					</thead>
+					<tbody class="text-foreground">
+						{
+							GTA_VERSIONS.map((version) => {
+								const min = version.minimum;
+								const windows =
+									version.os.minWindowsMajor === null
+										? "Windows"
+										: `Windows ${version.os.minWindowsMajor}+`;
+								return (
+									<tr class={TABLE_ROW_CLASS}>
+										<th scope="row" class={`${TABLE_CELL_CLASS} font-medium`}>
+											{version.title} <span class="text-muted-foreground font-normal">{version.edition}</span>
+										</th>
+										<td class={CELL}>{formatGb(min.ramGb) ?? <span class="text-muted-foreground">{NOT_PUBLISHED}</span>}</td>
+										<td class={CELL}>{formatGb(min.vramGb) ?? <span class="text-muted-foreground">{NOT_PUBLISHED}</span>}</td>
+										<td class={CELL}>{formatGb(min.diskGb) ?? <span class="text-muted-foreground">{NOT_PUBLISHED}</span>}</td>
+										<td class={CELL}>{windows}{version.os.requires64Bit ? ", 64-bit" : ""}</td>
+									</tr>
+								);
+							})
+						}
+					</tbody>
+				</table>
+		</TableCard>
+		<p class="text-muted-foreground text-sm">
+			Full CPU and GPU requirements are in <a class="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent" href="/requirements.md">Markdown</a> and <a class="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent" href="/api/versions.json">JSON</a>.
+		</p>
 	</div>
-	<p class="text-muted-foreground mt-4 text-sm">
-		Full CPU and GPU requirements are in <a class="underline" href="/requirements.md">Markdown</a> and <a class="underline" href="/api/versions.json">JSON</a>.
-	</p>
-</section>
+</SeoSection>

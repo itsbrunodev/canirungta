@@ -38,6 +38,17 @@ Link a user to their results with the same parameters on the homepage, e.g. http
 - [Requirements (Markdown)](https://canirungta.com/requirements.md): minimum and recommended specs for all versions on one page
 - [Versions (JSON)](https://canirungta.com/api/versions.json): the same data as JSON, with source URLs and a `confidence` field (`official`, `approximate`, `unannounced`); `null` means no published figure
 
+## Game pages
+
+One page per game with both PC editions, requirements, an FPS table per edition and an FAQ:
+
+- [GTA 6](https://canirungta.com/gta-6): projected, no PC release announced
+- [GTA 5](https://canirungta.com/gta-5): Enhanced and original 2015 PC
+- [GTA 4](https://canirungta.com/gta-4): Complete Edition and original PC
+- [GTA San Andreas](https://canirungta.com/gta-san-andreas): Definitive Edition and original PC
+- [GTA Vice City](https://canirungta.com/gta-vice-city): Definitive Edition and original PC
+- [GTA 3](https://canirungta.com/gta-3): Definitive Edition and original PC
+
 ## Interfaces
 
 - [OpenAPI 3.1 spec](https://canirungta.com/openapi.json): import as a GPT Action or any tool-calling client

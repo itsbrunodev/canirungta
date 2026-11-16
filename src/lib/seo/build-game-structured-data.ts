@@ -1,7 +1,7 @@
-import type { FaqItem, GamePage } from "@/constants/gta/game-pages";
 import { SITE_NAME } from "@/constants/site";
 
 import type { GtaVersion } from "@/lib/gta/types";
+import type { FaqItem, GamePage } from "@/lib/seo/game-page-types";
 
 interface GameStructuredDataInput {
 	siteUrl: string;

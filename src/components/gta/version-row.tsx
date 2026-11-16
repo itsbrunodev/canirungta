@@ -4,6 +4,7 @@ import { PerformanceCard } from "@/components/gta/performance-card";
 import { PerformanceSkeleton } from "@/components/gta/performance-skeleton";
 import { VerdictSkeleton } from "@/components/gta/verdict-skeleton";
 import { VerdictText } from "@/components/gta/verdict-text";
+import { NewTabHint } from "@/components/ui/new-tab-hint";
 
 import type { ResolutionId } from "@/lib/gta/performance-types";
 import type {
@@ -157,6 +158,7 @@ export function VersionRow({
 					>
 						Source
 						<ExternalLinkIcon class="size-3.5 shrink-0" />
+						<NewTabHint />
 					</a>
 				</div>
 			</div>

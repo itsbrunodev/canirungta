@@ -1,0 +1,38 @@
+---
+// One hero for every page. Top-aligned with a fixed min-height, so the headline sits at the same
+// spot and the hero ends at the same line on every page, whatever the copy length.
+import { ChevronDownIcon } from "@/icons/chevron-down";
+
+interface Props {
+	// Shows "All GTA games" in the top-left, mirroring the settings cog.
+	back?: boolean;
+}
+
+const { back = false } = Astro.props;
+---
+
+{back && (
+	<nav aria-label="Site" class="absolute top-[max(0.75rem,env(safe-area-inset-top))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 sm:top-4 sm:left-6">
+		{/* The ::after pad grows the touch target past the 32px pill without changing its look. */}
+		<a
+			href="/"
+			class="group relative inline-flex h-8 items-center gap-1 rounded-full pr-3 pl-2 font-medium text-muted-foreground text-sm transition-colors after:absolute after:-inset-1.5 after:content-[''] hover:bg-ink/8 hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+		>
+			<ChevronDownIcon class="size-4 shrink-0 rotate-90 transition-[translate] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-0.5" />
+			All GTA games
+		</a>
+	</nav>
+)}
+<header class="mx-auto flex min-h-104 w-full max-w-3xl flex-col items-center gap-5 pt-8 pb-6 text-center sm:gap-6 sm:pt-20 lg:pt-28">
+	<h1 class="animate-rise text-4xl font-bold tracking-tight text-balance min-[420px]:text-5xl lg:text-6xl">
+		<slot name="title" />
+	</h1>
+	<p style={{ "--delay": "60ms" }} class="animate-rise text-foreground text-lg text-balance sm:text-xl">
+		<slot name="intro" />
+	</p>
+	{Astro.slots.has("note") && (
+		<div style={{ "--delay": "120ms" }} class="animate-rise max-w-2xl text-muted-foreground text-balance">
+			<slot name="note" />
+		</div>
+	)}
+</header>

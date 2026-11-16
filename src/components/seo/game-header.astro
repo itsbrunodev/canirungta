@@ -1,0 +1,47 @@
+---
+import GradientText from "@/components/layout/gradient-text.astro";
+import PageHero from "@/components/layout/page-hero.astro";
+
+import { DEFAULT_HERO_NOTE } from "@/constants/site";
+
+import type { GamePage } from "@/lib/seo/game-page-types";
+
+interface Props {
+	game: GamePage;
+}
+
+const { game } = Astro.props;
+// Gradient on the game's name, like "GTA" in the homepage headline.
+const [before, after] = game.h1.includes(game.shortName)
+	? game.h1.split(game.shortName)
+	: [game.h1, null];
+const notice = game.notice;
+const highlightAt = notice?.highlight
+	? notice.text.indexOf(notice.highlight)
+	: -1;
+---
+
+<PageHero back>
+	<Fragment slot="title">
+		{before}
+		{after !== null && (
+			<>
+				<GradientText>{game.shortName}</GradientText>{after}
+			</>
+		)}
+	</Fragment>
+	<Fragment slot="intro">{game.intro}</Fragment>
+	<p slot="note" role={notice ? "note" : undefined}>
+		{!notice ? (
+			DEFAULT_HERO_NOTE
+		) : highlightAt === -1 || !notice.highlight ? (
+			notice.text
+		) : (
+			<>
+				{notice.text.slice(0, highlightAt)}
+				<span class="font-medium text-warning">{notice.highlight}</span>
+				{notice.text.slice(highlightAt + notice.highlight.length)}
+			</>
+		)}
+	</p>
+</PageHero>

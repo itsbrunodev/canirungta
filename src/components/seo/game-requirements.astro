@@ -1,12 +1,26 @@
 ---
+import SeoSection from "@/components/seo/seo-section.astro";
 // Server-rendered min/recommended tables so crawlers and no-JS readers get the specs.
-import type { GamePage } from "@/constants/gta/game-pages";
+import TableCard from "@/components/seo/table-card.astro";
+import { NewTabHint } from "@/components/ui/new-tab-hint";
+
+import {
+	CHIP_CLASS,
+	CHIP_LINK_CLASS,
+	TABLE_CELL_CLASS,
+	TABLE_HEAD_CELL_CLASS,
+	TABLE_ROW_CLASS,
+} from "@/constants/seo/table-styles";
 
 import type { GtaVersion } from "@/lib/gta/types";
 import {
 	describeRequirement,
+	NOT_PUBLISHED,
 	recommendedOf,
 } from "@/lib/seo/describe-requirement";
+import type { GamePage } from "@/lib/seo/game-page-types";
+
+import { ExternalLinkIcon } from "@/icons/external-link";
 
 interface Props {
 	game: GamePage;
@@ -16,52 +30,53 @@ interface Props {
 const { game, versions } = Astro.props;
 ---
 
-<section aria-labelledby="requirements" class="w-full">
-	<h2 id="requirements" class="text-foreground text-xl font-semibold tracking-tight sm:text-3xl">
-		{game.shortName} PC system requirements
-	</h2>
+<SeoSection id="requirements" title={`${game.shortName} PC system requirements`}>
 	{
 		versions.map((version) => {
 			const min = describeRequirement(version.minimum, version);
 			const rec = describeRequirement(recommendedOf(version), version);
 			return (
-				<div class="mt-6">
+				<div class="flex flex-col gap-3">
 					{versions.length > 1 && (
-						<h3 class="text-foreground mb-2 font-medium">
+						<h3 class="text-foreground font-medium">
 							{version.title} <span class="text-muted-foreground font-normal">{version.edition}</span>
 						</h3>
 					)}
-					<div class="overflow-x-auto">
-						<table class="w-full min-w-[28rem] border-collapse text-left text-sm">
-							<caption class="sr-only">
-								Minimum and recommended PC requirements for {version.title} {version.edition}
-							</caption>
-							<thead class="text-muted-foreground border-border border-b">
-								<tr>
-									<th scope="col" class="py-2 pr-4 font-medium">Component</th>
-									<th scope="col" class="py-2 pr-4 font-medium">Minimum</th>
-									<th scope="col" class="py-2 font-medium">Recommended</th>
-								</tr>
-							</thead>
-							<tbody class="text-foreground divide-border divide-y">
-								{min.map((row, i) => (
+					<TableCard label={`${version.title} ${version.edition} requirements`}>
+							<table class="w-full min-w-[20rem] border-collapse text-left text-sm sm:text-base">
+								<caption class="sr-only">
+									Minimum and recommended PC requirements for {version.title} {version.edition}
+								</caption>
+								<thead>
 									<tr>
-										<th scope="row" class="py-2 pr-4 font-medium">{row.label}</th>
-										<td class="py-2 pr-4">{row.value}</td>
-										<td class="py-2">{rec[i]?.value}</td>
+										<th scope="col" class={`${TABLE_HEAD_CELL_CLASS} w-20 sm:w-28`}>Component</th>
+										<th scope="col" class={TABLE_HEAD_CELL_CLASS}>Minimum</th>
+										<th scope="col" class={TABLE_HEAD_CELL_CLASS}>Recommended</th>
 									</tr>
-								))}
-							</tbody>
-						</table>
+								</thead>
+								<tbody class="text-foreground">
+									{min.map((row, i) => (
+										<tr class={TABLE_ROW_CLASS}>
+											<th scope="row" class={`${TABLE_CELL_CLASS} text-muted-foreground font-medium`}>{row.label}</th>
+											<td class={`${TABLE_CELL_CLASS} ${row.value === NOT_PUBLISHED ? "text-muted-foreground" : ""}`}>{row.value}</td>
+											<td class={`${TABLE_CELL_CLASS} ${rec[i]?.value === NOT_PUBLISHED ? "text-muted-foreground" : "font-medium"}`}>{rec[i]?.value}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+					</TableCard>
+					<div class="flex flex-wrap items-center gap-2">
+						<span class={CHIP_CLASS}>
+							{version.confidence === "official" ? "Published by Rockstar Games" : "Unofficial, not from Rockstar"}
+						</span>
+						<a class={CHIP_LINK_CLASS} href={version.sourceUrl} target="_blank" rel="noopener noreferrer">
+							Source
+							<ExternalLinkIcon class="size-3.5 shrink-0" />
+							<NewTabHint />
+						</a>
 					</div>
-					<p class="text-muted-foreground mt-2 text-sm">
-						{version.confidence === "official"
-							? "Figures published by Rockstar Games. "
-							: "Unofficial figures; not published by Rockstar. "}
-						<a class="underline" href={version.sourceUrl} target="_blank" rel="noopener noreferrer">Source</a>
-					</p>
 				</div>
 			);
 		})
 	}
-</section>
+</SeoSection>

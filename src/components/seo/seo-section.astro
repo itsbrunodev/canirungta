@@ -1,0 +1,20 @@
+---
+// Heading + optional lede + content, revealed on scroll; one rhythm for every SEO block.
+interface Props {
+	id: string;
+	title: string;
+	as?: "section" | "nav";
+}
+
+const { id, title, as: Tag = "section" } = Astro.props;
+---
+
+<Tag aria-labelledby={id} class="animate-reveal flex w-full scroll-mt-8 flex-col gap-6">
+	<div class="flex max-w-3xl flex-col gap-2">
+		<h2 id={id} class="text-foreground text-xl font-semibold tracking-tight sm:text-3xl">{title}</h2>
+		{Astro.slots.has("lede") && (
+			<p class="text-muted-foreground text-sm leading-relaxed sm:text-base"><slot name="lede" /></p>
+		)}
+	</div>
+	<slot />
+</Tag>

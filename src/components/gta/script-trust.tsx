@@ -1,6 +1,7 @@
 import { SCRIPT_HASHES } from "virtual:script-hashes";
 
 import { CopyButton } from "@/components/gta/copy-button";
+import { NewTabHint } from "@/components/ui/new-tab-hint";
 
 import {
 	getHashCommand,
@@ -66,6 +67,7 @@ export function ScriptTrust({ platform }: ScriptTrustProps) {
 					>
 						VirusTotal report
 						<ExternalLinkIcon class="size-3" />
+						<NewTabHint />
 					</a>
 					<a href="/SHA256SUMS" class={LINK_CLASS}>
 						SHA256SUMS

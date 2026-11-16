@@ -17,6 +17,8 @@ export default defineConfig({
 	// Static pages by default; only /api/check runs on the server.
 	adapter: vercel(),
 	integrations: [preact(), sitemap()],
+	// The toolbar injects its own links and markup, which skews Lighthouse/axe runs against `astro dev`.
+	devToolbar: { enabled: false },
 
 	// Fonts are downloaded at build time and self-hosted; no runtime CDN request.
 	fonts: [

@@ -1,0 +1,58 @@
+---
+import TableCard from "@/components/seo/table-card.astro";
+
+import { FPS_RATING_STYLES } from "@/constants/gta/fps-rating-styles";
+import {
+	TABLE_CELL_CLASS,
+	TABLE_HEAD_CELL_CLASS,
+	TABLE_ROW_CLASS,
+} from "@/constants/seo/table-styles";
+
+import type { FpsTable } from "@/lib/seo/build-fps-table";
+
+interface Props {
+	table: FpsTable;
+	// For the screen-reader caption: "GTA 5 Enhanced".
+	label: string;
+}
+
+const { table, label } = Astro.props;
+---
+
+<TableCard label={`${label} FPS by graphics card`}>
+		<table class="w-full min-w-[21rem] border-collapse text-left text-sm sm:text-base">
+			<caption class="sr-only">Estimated {label} FPS per graphics card on {table.presetLabel} settings at {table.resolutions.map((r) => r.label).join(", ")}</caption>
+			<thead>
+				<tr>
+					<th scope="col" class={TABLE_HEAD_CELL_CLASS}>Graphics card</th>
+					{table.resolutions.map((r) => <th scope="col" class={`${TABLE_HEAD_CELL_CLASS} text-right`}>{r.label}</th>)}
+				</tr>
+			</thead>
+			<tbody>
+				{
+					table.rows.map((row) => (
+						<tr class={TABLE_ROW_CLASS}>
+							<th scope="row" class={`${TABLE_CELL_CLASS} text-foreground font-medium`}>{row.gpu}</th>
+							{row.cells.map((cell) => {
+								const style = cell?.rating ? FPS_RATING_STYLES[cell.rating] : null;
+								return (
+									<td class={`${TABLE_CELL_CLASS} text-right whitespace-nowrap tabular-nums`}>
+										{cell?.fps != null && style ? (
+											<span class={`inline-flex items-baseline gap-1 font-semibold ${style.textClassName}`}>
+												{cell.fps}
+												<span class="text-muted-foreground text-xs font-medium">FPS</span>
+												{/* The color carries the rating; say it for screen readers too. */}
+												<span class="sr-only">, {style.label}</span>
+											</span>
+										) : (
+											<span class="text-muted-foreground">n/a</span>
+										)}
+									</td>
+								);
+							})}
+						</tr>
+					))
+				}
+			</tbody>
+		</table>
+</TableCard>

@@ -1,0 +1,23 @@
+---
+// Stands in for an FPS table when every GPU sits on the frame limiter.
+import { TABLE_CARD_CLASS } from "@/constants/seo/table-styles";
+
+interface Props {
+	fps: number;
+}
+
+const { fps } = Astro.props;
+---
+
+<div class={`${TABLE_CARD_CLASS} flex items-center gap-5 p-4 sm:gap-6 sm:p-5`}>
+	<p class="text-foreground flex shrink-0 items-baseline gap-1.5 leading-none">
+		<span class="text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl">{fps}</span>
+		<span class="text-muted-foreground text-sm font-medium">FPS</span>
+	</p>
+	<div class="border-ink/10 flex min-w-0 flex-col gap-1 border-l pl-5 sm:pl-6">
+		<p class="text-foreground font-medium">Locked on every PC</p>
+		<p class="text-muted-foreground text-sm leading-relaxed">
+			The frame limiter holds it at {fps} FPS on any hardware, from integrated graphics to an RTX 4090. Turning it off breaks physics and timing.
+		</p>
+	</div>
+</div>

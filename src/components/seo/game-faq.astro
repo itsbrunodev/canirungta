@@ -1,5 +1,11 @@
 ---
-import type { FaqItem } from "@/constants/gta/game-pages";
+import SeoSection from "@/components/seo/seo-section.astro";
+
+import { TABLE_CARD_CLASS } from "@/constants/seo/table-styles";
+
+import type { FaqItem } from "@/lib/seo/game-page-types";
+
+import { ChevronDownIcon } from "@/icons/chevron-down";
 
 interface Props {
 	shortName: string;
@@ -7,20 +13,37 @@ interface Props {
 }
 
 const { shortName, items } = Astro.props;
+// Shared easing with the rest of the site's motion.
+const EASE = "ease-[cubic-bezier(0.16,1,0.3,1)]";
 ---
 
-<section aria-labelledby="faq" class="w-full">
-	<h2 id="faq" class="text-foreground text-xl font-semibold tracking-tight sm:text-3xl">
-		{shortName} PC FAQ
-	</h2>
-	<div class="divide-border mt-6 divide-y">
+<SeoSection id="faq" title={`${shortName} PC FAQ`}>
+	<div class={TABLE_CARD_CLASS}>
 		{
-			items.map((item) => (
-				<details class="group py-4">
-					<summary class="text-foreground cursor-pointer font-medium marker:text-muted-foreground">{item.question}</summary>
-					<p class="text-muted-foreground mt-2 text-sm leading-relaxed">{item.answer}</p>
+			items.map((item, index) => (
+				// name="faq": one answer open at a time, so opening another closes the last smoothly.
+				<details
+					name="faq"
+					open={index === 0}
+					class="group details-smooth border-ink/10 border-t transition-colors duration-300 first:border-t-0 open:bg-ink/2"
+				>
+					<summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-foreground transition-colors duration-200 hover:bg-ink/3 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent sm:px-5 [&::-webkit-details-marker]:hidden">
+						<span class="font-medium text-base leading-snug sm:text-lg">{item.question}</span>
+						<span
+							class={`glass grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-[rotate,color,border-color] duration-500 group-open:rotate-180 group-open:border-accent/40 group-open:text-accent group-hover:text-foreground ${EASE}`}
+							aria-hidden="true"
+						>
+							<ChevronDownIcon class="size-4" />
+						</span>
+					</summary>
+					{/* Slides up a touch while the height opens, and back down on close. */}
+					<p
+						class={`max-w-prose -translate-y-1.5 px-4 pb-5 text-muted-foreground text-sm leading-relaxed opacity-0 transition-[translate,opacity] duration-500 group-open:translate-y-0 group-open:opacity-100 sm:px-5 sm:pr-16 sm:text-base ${EASE}`}
+					>
+						{item.answer}
+					</p>
 				</details>
 			))
 		}
 	</div>
-</section>
+</SeoSection>

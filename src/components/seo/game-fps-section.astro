@@ -1,0 +1,76 @@
+---
+import FpsLockedCard from "@/components/seo/fps-locked-card.astro";
+import FpsTable from "@/components/seo/fps-table.astro";
+import SeoSection from "@/components/seo/seo-section.astro";
+
+import {
+	FPS_RATING_STYLES,
+	FPS_TARGET,
+} from "@/constants/gta/fps-rating-styles";
+import {
+	FPS_TABLE_CPU,
+	FPS_TABLE_RAM_GB,
+} from "@/constants/gta/fps-reference-hardware";
+import { CHIP_CLASS } from "@/constants/seo/table-styles";
+
+import type { GameEdition, GamePage } from "@/lib/seo/game-page-types";
+
+interface Props {
+	game: GamePage;
+	editions: GameEdition[];
+}
+
+const { game, editions } = Astro.props;
+const shown = editions.filter((edition) => edition.fps !== null);
+const single = editions.length === 1;
+const projected = shown.some(({ fps }) => fps?.basis === "projected");
+// The legend sits under the last real table, not after a frame-locked card.
+const lastTableIndex = shown.findLastIndex(
+	({ fps }) => fps?.lockedFps === null,
+);
+const legend = [
+	{ ...FPS_RATING_STYLES.smooth, range: `${FPS_TARGET}+` },
+	{ ...FPS_RATING_STYLES.playable, range: `30-${FPS_TARGET - 1}` },
+	{ ...FPS_RATING_STYLES.choppy, range: "under 30" },
+];
+---
+
+{shown.length > 0 && (
+	<SeoSection id="fps" title={`${game.shortName} FPS by graphics card`}>
+		<Fragment slot="lede">
+			Estimated average FPS with a {FPS_TABLE_CPU.replace(/^AMD /, "")} and {FPS_TABLE_RAM_GB} GB RAM; only the graphics card changes.
+			{projected ? " Projected from unofficial specs: a rough guide, not a benchmark." : " Modelled from published benchmarks, not measured on your PC."}
+			Your own result above uses your actual hardware.
+		</Fragment>
+		{shown.map(({ version, fps }, index) => fps && (
+			<div class="flex flex-col gap-3">
+				<h3 class="text-foreground font-medium">
+					{single ? (
+						<span class="text-muted-foreground font-normal">{fps.lockedFps === null ? `On ${fps.presetLabel} settings` : "Frame-locked"}</span>
+					) : (
+						<>
+							{version.edition}{" "}
+							<span class="text-muted-foreground font-normal">{fps.lockedFps === null ? `on ${fps.presetLabel} settings` : "is frame-locked"}</span>
+						</>
+					)}
+				</h3>
+				{fps.lockedFps === null ? (
+					<FpsTable table={fps} label={`${game.shortName} ${version.edition}`} />
+				) : (
+					<FpsLockedCard fps={fps.lockedFps} />
+				)}
+				{index === lastTableIndex && (
+					<ul class="flex flex-wrap items-center gap-2" aria-label="FPS rating legend">
+						{legend.map((item) => (
+							<li class={CHIP_CLASS}>
+								<span class={`size-2 rounded-full ${item.barClassName}`} aria-hidden="true" />
+								{item.label}
+								<span class="text-muted-foreground font-normal">{item.range}</span>
+							</li>
+						))}
+					</ul>
+				)}
+			</div>
+		))}
+	</SeoSection>
+)}

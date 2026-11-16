@@ -253,6 +253,17 @@
 	animation-delay: calc(var(--delay, 0ms) + 500ms);
 }
 
+/* Sections fade up as they scroll into view; browsers without scroll timelines show them as-is. */
+@utility animate-reveal {
+	@media (prefers-reduced-motion: no-preference) {
+		@supports (animation-timeline: view()) {
+			animation: rise linear both;
+			animation-timeline: view();
+			animation-range: entry 0% entry 35%;
+		}
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*,
 	::before,
@@ -261,6 +272,15 @@
 		animation-duration: 0.01ms !important;
 		/* biome-ignore lint/complexity/noImportantStyles: same */
 		animation-delay: 0ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: transitions move things too (disclosures, chevrons) */
+		transition-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: same */
+		transition-delay: 0ms !important;
+	}
+	/* Own rule: browsers without ::details-content would drop the whole selector list above. */
+	::details-content {
+		/* biome-ignore lint/complexity/noImportantStyles: same */
+		transition-duration: 0.01ms !important;
 	}
 }
 

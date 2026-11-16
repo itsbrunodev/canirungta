@@ -29,3 +29,21 @@ export const MODERN_REFERENCE_GPUS: ReferenceGpu[] = [
 	{ name: "AMD Radeon RX 5700 XT", vramGb: 8 },
 	{ name: "Intel Arc B580", vramGb: 12 },
 ];
+
+// Budget, older and integrated GPUs: where older games' FPS actually varies. Names as browsers report them.
+export const ENTRY_REFERENCE_GPUS: ReferenceGpu[] = [
+	{ name: "NVIDIA GeForce RTX 3060", vramGb: 12 },
+	{ name: "NVIDIA GeForce GTX 1660 SUPER", vramGb: 6 },
+	{ name: "NVIDIA GeForce GTX 1650", vramGb: 4 },
+	{ name: "NVIDIA GeForce GTX 1050 Ti", vramGb: 4 },
+	{ name: "NVIDIA GeForce GTX 750 Ti", vramGb: 2 },
+	{ name: "AMD Radeon RX 6600", vramGb: 8 },
+	{ name: "AMD Radeon RX 580", vramGb: 8 },
+	{ name: "AMD Radeon RX 6500 XT", vramGb: 4 },
+	{ name: "Intel Arc A380", vramGb: 6 },
+	{ name: "AMD Radeon 780M Graphics", vramGb: 4 },
+	{ name: "Intel Iris Xe Graphics", vramGb: 2 },
+	{ name: "AMD Radeon Vega 8 Graphics", vramGb: 2 },
+	{ name: "Intel UHD Graphics 770", vramGb: 1 },
+	{ name: "Intel UHD Graphics 620", vramGb: 1 },
+];
