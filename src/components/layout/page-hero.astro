@@ -1,6 +1,6 @@
 ---
-// One hero for every page. Top-aligned with a fixed min-height, so the headline sits at the same
-// spot and the hero ends at the same line on every page, whatever the copy length.
+// One hero for every page. From sm up: fixed min-height, so the headline sits at the same spot and the
+// hero ends at the same line whatever the copy length. On mobile it sizes to its copy, no dead space.
 import { ChevronDownIcon } from "@/icons/chevron-down";
 
 interface Props {
@@ -23,7 +23,7 @@ const { back = false } = Astro.props;
 		</a>
 	</nav>
 )}
-<header class="mx-auto flex min-h-104 w-full max-w-3xl flex-col items-center gap-5 pt-8 pb-6 text-center sm:gap-6 sm:pt-20 lg:pt-28">
+<header class="mx-auto flex w-full max-w-3xl flex-col items-center gap-5 pt-20 pb-16 text-center sm:min-h-104 sm:gap-6 sm:pt-20 sm:pb-6 lg:pt-28">
 	<h1 class="animate-rise text-4xl font-bold tracking-tight text-balance min-[420px]:text-5xl lg:text-6xl">
 		<slot name="title" />
 	</h1>
