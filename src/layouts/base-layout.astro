@@ -103,5 +103,15 @@ const imageUrl =
 			>Skip to content</a
 		>
 		<slot />
+		{
+			import.meta.env.PROD && (
+				<script
+					is:inline
+					type="module"
+					src="https://static.cloudflareinsights.com/beacon.min.js"
+					data-cf-beacon='{"token": "2ede7b7f22f945579d862aeda4720a5f"}'
+				/>
+			)
+		}
 	</body>
 </html>
